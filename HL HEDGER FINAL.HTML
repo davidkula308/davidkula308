@@ -1,0 +1,3715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Higher/Lower Hedger Tool</title>
+    <style>
+        body {
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .main-content {
+            padding: 20px;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .panel {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .panel h3 { color: #4fc3f7; margin-bottom: 10px; }
+        input, select {
+            width: 100%; padding: 10px; border-radius: 8px;
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+            color: #fff; font-size: 14px;
+        }
+        .button { padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; }
+        .button-primary { background: linear-gradient(135deg,#4fc3f7,#29b6f6); }
+        .button-success { background: linear-gradient(135deg,#66bb6a,#4caf50); }
+        .button-danger { background: linear-gradient(135deg,#ef5350,#f44336); }
+        .button-secondary { background: rgba(255,255,255,0.1); color:#fff; }
+        .status-indicator {
+            display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;
+        }
+        .status-connected { background:#4caf50;box-shadow:0 0 8px rgba(76,175,80,0.5);}
+        .status-disconnected { background:#f44336;}
+        .market-info, .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:15px;}
+        .stat-item, .info-item {
+            background: rgba(255,255,255,0.05);
+            border-radius:8px; padding:10px; text-align:center;
+        }
+        .stat-value, .info-value { color:#4fc3f7; font-weight:bold; }
+        .log-content {
+            background: rgba(0,0,0,0.3); border-radius:8px; height:250px;
+            overflow-y:auto; font-family:'Courier New',monospace; font-size:12px;
+        }
+        .log-entry { margin-bottom:4px; }
+        .log-info { color:#4fc3f7; } .log-success{color:#4caf50;}
+        .log-error{color:#f44336;} .log-warning{color:#ff9800;}
+        .toggle-switch { position:relative; display:inline-block; width:60px; height:34px;}
+        .toggle-switch input{opacity:0;width:0;height:0;}
+        .slider { position:absolute; top:0; left:0; right:0; bottom:0;
+            background:rgba(255,255,255,0.2); border-radius:34px; transition:.4s;}
+        .slider:before { position:absolute; content:""; height:26px;width:26px;left:4px;bottom:4px;
+            background:white;border-radius:50%;transition:.4s;}
+        input:checked + .slider { background:#4fc3f7;}
+        input:checked + .slider:before { transform:translateX(26px);}
+        @media(max-width:768px){
+            .container{grid-template-columns:1fr;}
+            .header {
+                flex-wrap: wrap;
+                text-align: left;
+            }
+            .header-left h1 {
+                font-size: 1.5rem;
+            }
+            .header-right {
+                flex-wrap: wrap;
+                width: 100%;
+                justify-content: space-between;
+                margin-top: 10px;
+            }
+        }
+
+        /* Advanced Hedger Tool Styles */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #b0b0b0;
+            font-size: 0.9rem;
+        }
+
+        .log-panel {
+            grid-column: 1 / -1;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        /* Header Styles */
+        .header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(79, 195, 247, 0.2);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: nowrap;
+            gap: 15px;
+            min-height: 80px;
+            width: 100%;
+            position: relative;
+            z-index: 100;
+        }
+
+        .header-left {
+            flex: 1;
+            min-width: 0;
+            text-align: left;
+        }
+
+        .header-left h1 {
+            font-size: 2rem;
+            color: #4fc3f7;
+            margin-bottom: 5px;
+            margin-top: 0;
+            text-align: left;
+        }
+
+        .header-left p {
+            color: #b0b0b0;
+            font-size: 0.9rem;
+            margin: 0;
+            text-align: left;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: nowrap;
+            flex-shrink: 0;
+            justify-content: flex-end;
+            margin-right: 2cm;
+        }
+
+        .balance-info {
+            text-align: right;
+        }
+
+        .balance-info .balance {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4fc3f7;
+        }
+
+        .status {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .status.connected {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4caf50;
+        }
+
+        .status.disconnected {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+        }
+
+        /* Panel Styles */
+        .panels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .panel-header {
+            color: #4fc3f7;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(79, 195, 247, 0.2);
+        }
+
+        /* Form Controls */
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(79, 195, 247, 0.3);
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 0.9rem;
+        }
+
+        .form-control option {
+            background: #1a1a2e;
+            color: #ffffff;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #4fc3f7;
+            box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.2);
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .radio-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .radio-item input[type="radio"] {
+            accent-color: #4fc3f7;
+        }
+
+        /* Hedge Panel */
+        .hedge-panel {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(79, 195, 247, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(79, 195, 247, 0.3);
+            display: none;
+        }
+
+        .hedge-panel.active {
+            display: block;
+        }
+
+        /* Market Switcher Panel */
+        .market-switcher-panel {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(255, 152, 0, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+            display: none;
+        }
+
+        .market-switcher-panel.active {
+            display: block;
+        }
+
+        /* Advanced Trading Panel */
+        .advanced-panel {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(156, 39, 176, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(156, 39, 176, 0.3);
+            display: none;
+        }
+
+        .advanced-panel.active {
+            display: block;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2196f3, #1976d2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1976d2, #1565c0);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4caf50, #388e3c);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #388e3c, #2e7d32);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #d32f2f, #c62828);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #4fc3f7;
+            border: 2px solid #4fc3f7;
+        }
+
+        .btn-secondary:hover {
+            background: #4fc3f7;
+            color: #1a1a2e;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .positive {
+            color: #4caf50;
+        }
+
+        .negative {
+            color: #f44336;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        /* Log Container */
+        .log-container {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(79, 195, 247, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-radius: 4px;
+        }
+
+        /* Recent Ticks */
+        .recent-ticks {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(79, 195, 247, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            height: 150px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+        }
+
+        .tick-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 2px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tick-entry:last-child {
+            border-bottom: none;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4fc3f7, #2196f3);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Menu Styles */
+        .menu-item:hover {
+            background: rgba(79, 195, 247, 0.2);
+        }
+
+        /* Trigger Card Styles */
+        .trigger-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.4) !important;
+        }
+
+        .trigger-card:has(input:checked) {
+            background: linear-gradient(135deg, rgba(79, 195, 247, 0.2), rgba(79, 195, 247, 0.1)) !important;
+            border-color: #4fc3f7 !important;
+            box-shadow: 0 0 8px rgba(79, 195, 247, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <h1>📈 Higher/Lower Hedger</h1>
+            <p>Advanced binary options hedging strategy</p>
+        </div>
+        <div class="header-right">
+            <div class="balance-info">
+                <div class="balance" id="hlHeaderBalance">$0.00</div>
+                <div class="status disconnected" id="hlHeaderConnectionStatus">Disconnected</div>
+            </div>
+            <div class="menu-container" style="position: relative;">
+                <button class="btn btn-secondary" id="menuBtn">☰ Menu</button>
+                <div class="menu-dropdown" id="menuDropdown" style="display: none; position: absolute; top: 100%; right: 0; background: rgba(26, 26, 46, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(79, 195, 247, 0.3); border-radius: 8px; padding: 10px; min-width: 200px; z-index: 1000; margin-top: 5px;">
+                    <div class="menu-item" id="advancedHedgerMenuItem" style="padding: 10px; cursor: pointer; border-radius: 5px; transition: background 0.3s ease; color: #ffffff;">
+                        🔧 Advanced Hedger Tool
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-primary" id="hlHeaderConnectBtn">Connect</button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <div class="container">
+            <!-- Panel 1: Trading Configuration -->
+            <div class="panel">
+                <div class="panel-header">Trading Configuration</div>
+                
+                <div class="form-group">
+                    <label for="hlApiToken">API Token</label>
+                    <input type="password" class="form-control" id="hlApiToken" placeholder="Enter your Deriv API token">
+                    <small style="color: #b0b0b0; font-size: 0.8rem; margin-top: 5px; display: block;">
+                        Get your token from <a href="https://app.deriv.com/account/api-token" target="_blank" rel="noopener noreferrer" style="color: #4fc3f7;">app.deriv.com/account/api-token</a>
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="hlMarketSelect">Market</label>
+                    <select class="form-control" id="hlMarketSelect">
+                        <option value="1HZ10V">Volatility 10 (1s) Index</option>
+                        <option value="1HZ15V">Volatility 15 (1s) Index</option>
+                        <option value="1HZ25V">Volatility 25 (1s) Index</option>
+                        <option value="1HZ30V">Volatility 30 (1s) Index</option>
+                        <option value="1HZ50V">Volatility 50 (1s) Index</option>
+                        <option value="1HZ75V">Volatility 75 (1s) Index</option>
+                        <option value="1HZ90V">Volatility 90 (1s) Index</option>
+                        <option value="1HZ100V">Volatility 100 (1s) Index</option>
+                        <option value="R_10">Volatility 10 Index</option>
+                        <option value="R_25">Volatility 25 Index</option>
+                        <option value="R_50">Volatility 50 Index</option>
+                        <option value="R_75">Volatility 75 Index</option>
+                        <option value="R_100">Volatility 100 Index</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Direction</label>
+                    <div class="radio-group">
+                        <div class="radio-item">
+                            <input type="radio" id="directionHigher" name="direction" value="higher" checked>
+                            <label for="directionHigher">Higher</label>
+                        </div>
+                        <div class="radio-item">
+                            <input type="radio" id="directionLower" name="direction" value="lower">
+                            <label for="directionLower">Lower</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Barrier Type</label>
+                    <div class="radio-group">
+                        <div class="radio-item">
+                            <input type="radio" id="barrierAbove" name="barrierType" value="above" checked>
+                            <label for="barrierAbove">Above</label>
+                        </div>
+                        <div class="radio-item">
+                            <input type="radio" id="barrierBelow" name="barrierType" value="below">
+                            <label for="barrierBelow">Below</label>
+                        </div>
+                        <div class="radio-item">
+                            <input type="radio" id="barrierFixed" name="barrierType" value="fixed">
+                            <label for="barrierFixed">Fixed</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="barrierValue">Barrier Value</label>
+                    <input type="number" class="form-control" id="barrierValue" step="0.01" value="0.06">
+                </div>
+
+                <div class="form-group">
+                    <label for="hlInitialStake">Initial Stake ($)</label>
+                    <input type="number" class="form-control" id="hlInitialStake" step="0.01" value="2.00" min="0.35">
+                    <small style="color: #b0b0b0; font-size: 0.8rem; margin-top: 5px; display: block;">
+                        Used only for the first trade (doubled in hedge mode)
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="hlStake">Regular Stake ($)</label>
+                    <input type="number" class="form-control" id="hlStake" step="0.01" value="10.00" min="0.35">
+                    <small style="color: #b0b0b0; font-size: 0.8rem; margin-top: 5px; display: block;">
+                        Used for all trades after the first one (doubled in hedge mode)
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="hlDuration">Duration (ticks)</label>
+                    <input type="number" class="form-control" id="hlDuration" value="5" min="1" max="10">
+                </div>
+
+                <div class="form-group">
+                    <label for="hlTakeProfit">Take Profit ($)</label>
+                    <input type="number" class="form-control" id="hlTakeProfit" step="0.01" value="10.00">
+                </div>
+
+                <div class="form-group">
+                    <label for="hlStopLoss">Stop Loss ($)</label>
+                    <input type="number" class="form-control" id="hlStopLoss" step="0.01" value="10.00">
+                </div>
+
+                <div class="form-group">
+                    <label for="hlMartingaleMultiplier">Martingale Multiplier</label>
+                    <input type="number" class="form-control" id="hlMartingaleMultiplier" step="0.1" value="2.0" min="1.0">
+                </div>
+
+                <div class="form-group">
+                    <label for="hlMaxSteps">Max Martingale Steps</label>
+                    <input type="number" class="form-control" id="hlMaxSteps" value="3" min="1" max="10">
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <span style="margin-right: 10px;">Hedge Mode</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="hlHedgeMode">
+                            <span class="slider"></span>
+                        </label>
+                    </label>
+                    <small style="color: #b0b0b0; font-size: 0.8rem; margin-top: 5px; display: block;">
+                        Places both HIGHER and LOWER contracts simultaneously at same entry point
+                    </small>
+                </div>
+
+                <div class="hedge-panel" id="hlHedgePanel">
+                    <div class="form-group">
+                        <label for="hedgeHigherBarrier">HIGHER Barrier Offset</label>
+                        <input type="number" class="form-control" id="hedgeHigherBarrier" step="0.01" value="0.06">
+                    </div>
+                    <div class="form-group">
+                        <label for="hedgeHigherBarrierType">HIGHER Barrier Type</label>
+                        <select class="form-control" id="hedgeHigherBarrierType">
+                            <option value="+">Above (+)</option>
+                            <option value="-">Below (-)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="hedgeLowerBarrier">LOWER Barrier Offset</label>
+                        <input type="number" class="form-control" id="hedgeLowerBarrier" step="0.01" value="0.06">
+                    </div>
+                    <div class="form-group">
+                        <label for="hedgeLowerBarrierType">LOWER Barrier Type</label>
+                        <select class="form-control" id="hedgeLowerBarrierType">
+                            <option value="-">Below (-)</option>
+                            <option value="+">Above (+)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="hlTradeDelay">Trade Delay (seconds)</label>
+                    <input type="number" class="form-control" id="hlTradeDelay" step="1" value="5" min="0">
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <span style="margin-right: 10px;">Market Switcher</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="hlMarketSwitcher">
+                            <span class="slider"></span>
+                        </label>
+                    </label>
+                </div>
+
+                <div class="market-switcher-panel" id="marketSwitcherPanel">
+                    <div class="form-group">
+                        <label for="tradesPerMarket">Trades Per Market</label>
+                        <input type="number" class="form-control" id="tradesPerMarket" value="5" min="1" max="50">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <span style="margin-right: 10px;">Advanced Trading Mode</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="hlAdvancedMode">
+                            <span class="slider"></span>
+                        </label>
+                    </label>
+                </div>
+
+                <div class="advanced-panel" id="advancedPanel">
+                    <div class="form-group">
+                        <label for="analysisDepth">Analysis Depth (ticks)</label>
+                        <input type="number" class="form-control" id="analysisDepth" value="200" min="50" max="1000">
+                    </div>
+                    <div class="form-group">
+                        <label for="trendThreshold">Trend Confidence Threshold</label>
+                        <input type="number" class="form-control" id="trendThreshold" step="0.1" value="0.6" min="0.1" max="1.0">
+                        <small style="color: #b0b0b0; font-size: 0.8rem; margin-top: 5px; display: block;">
+                            Minimum confidence score (0.1-1.0) to execute trades
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label>Markets to Analyze</label>
+                        <div class="market-checkboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
+                            <label style="display: flex; align-items: center; gap: 8px; color: #b0b0b0; font-size: 0.9rem;">
+                                <input type="checkbox" id="market_1HZ10V" value="1HZ10V" checked style="accent-color: #4fc3f7;">
+                                Volatility 10 (1s)
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; color: #b0b0b0; font-size: 0.9rem;">
+                                <input type="checkbox" id="market_1HZ15V" value="1HZ15V" style="accent-color: #4fc3f7;">
+                                Volatility 15 (1s)
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; color: #b0b0b0; font-size: 0.9rem;">
+                                <input type="checkbox" id="market_1HZ25V" value="1HZ25V" style="accent-color: #4fc3f7;">
+                                Volatility 25 (1s)
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; color: #b0b0b0; font-size: 0.9rem;">
+                                <input type="checkbox" id="market_1HZ30V" value="1HZ30V" style="accent-color: #4fc3f7;">
+                                Volatility 30 (1s)
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; color: #b0b0b0; font-size: 0.9rem;">
+                                <input type="checkbox" id="market_1HZ50V" value="1HZ50V" style="accent-color: #4fc3f7;">
+                                Volatility 50 (1s)
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; color: #b0b0b0; font-size: 0.9rem;">
+                                <input type="checkbox" id="market_1HZ75V" value="1HZ75V" style="accent-color: #4fc3f7;">
+                                Volatility 75 (1s)
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; color: #b0b0b0; font-size: 0.9rem;">
+                                <input type="checkbox" id="market_1HZ90V" value="1HZ90V" style="accent-color: #4fc3f7;">
+                                Volatility 90 (1s)
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; color: #b0b0b0; font-size: 0.9rem;">
+                                <input type="checkbox" id="market_1HZ100V" value="1HZ100V" style="accent-color: #4fc3f7;">
+                                Volatility 100 (1s)
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; color: #b0b0b0; font-size: 0.9rem;">
+                                <input type="checkbox" id="market_R_10" value="R_10" style="accent-color: #4fc3f7;">
+                                Volatility 10 Index
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; color: #b0b0b0; font-size: 0.9rem;">
+                                <input type="checkbox" id="market_R_25" value="R_25" style="accent-color: #4fc3f7;">
+                                Volatility 25 Index
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; color: #b0b0b0; font-size: 0.9rem;">
+                                <input type="checkbox" id="market_R_50" value="R_50" style="accent-color: #4fc3f7;">
+                                Volatility 50 Index
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; color: #b0b0b0; font-size: 0.9rem;">
+                                <input type="checkbox" id="market_R_75" value="R_75" style="accent-color: #4fc3f7;">
+                                Volatility 75 Index
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; color: #b0b0b0; font-size: 0.9rem;">
+                                <input type="checkbox" id="market_R_100" value="R_100" style="accent-color: #4fc3f7;">
+                                Volatility 100 Index
+                            </label>
+                        </div>
+                        <div style="margin-top: 10px; display: flex; gap: 10px;">
+                            <button class="btn btn-secondary" id="selectAllMarketsBtn" style="font-size: 0.8rem; padding: 5px 10px;">Select All</button>
+                            <button class="btn btn-secondary" id="clearAllMarketsBtn" style="font-size: 0.8rem; padding: 5px 10px;">Clear All</button>
+                        </div>
+                    </div>
+                    <div class="controls" style="margin-top: 15px;">
+                        <button class="btn btn-primary" id="hlAnalyzeOnlyBtn">🔍 Analyze Only</button>
+                        <button class="btn btn-success" id="hlAnalyzeTradeBtn">📊 Analyze & Trade</button>
+                    </div>
+                </div>
+
+
+
+
+            </div>
+
+            <!-- Panel 2: Market & Contract -->
+            <div class="panel">
+                <div class="panel-header">Market & Contract</div>
+                
+                <div class="market-info">
+                    <div class="info-item">
+                        <div class="info-value" id="hlCurrentTick">0.000</div>
+                        <div class="info-label">Current Tick</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-value" id="hlTickTime">--:--:--</div>
+                        <div class="info-label">Tick Time</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-value" id="hlBalance">$0.00</div>
+                        <div class="info-label">Balance</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Recent Ticks</label>
+                    <div class="recent-ticks" id="hlRecentTicks">
+                        <div style="text-align: center; color: #b0b0b0; margin-top: 50px;">
+                            Connect to view live ticks
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Contract Progress</label>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="hlContractProgress"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 3: Trend Analysis -->
+            <div class="panel" id="trendAnalysisPanel" style="display: none;">
+                <div class="panel-header">🧠 AI Trend Analysis</div>
+                
+                <div class="market-info">
+                    <div class="info-item">
+                        <div class="info-value" id="trendDirection">ANALYZING</div>
+                        <div class="info-label">Trend Direction</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-value" id="trendConfidence">0.0</div>
+                        <div class="info-label">Confidence Score</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-value" id="trendStrength">NEUTRAL</div>
+                        <div class="info-label">Trend Strength</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Technical Indicators</label>
+                    <div class="recent-ticks" id="technicalIndicators">
+                        <div class="tick-entry">
+                            <span>EMA 50:</span>
+                            <span id="ema50">--</span>
+                        </div>
+                        <div class="tick-entry">
+                            <span>EMA 200:</span>
+                            <span id="ema200">--</span>
+                        </div>
+                        <div class="tick-entry">
+                            <span>RSI (14):</span>
+                            <span id="rsi14">--</span>
+                        </div>
+                        <div class="tick-entry">
+                            <span>Linear Slope:</span>
+                            <span id="linearSlope">--</span>
+                        </div>
+                        <div class="tick-entry">
+                            <span>Volatility:</span>
+                            <span id="volatility">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Analysis Progress</label>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="analysisProgress"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 4: Multi-Market Analysis -->
+            <div class="panel" id="multiMarketPanel" style="display: none;">
+                <div class="panel-header">📊 Multi-Market Scanner</div>
+                
+                <div class="form-group">
+                    <label>Market Analysis Results</label>
+                    <div class="recent-ticks" id="multiMarketResults" style="height: 200px;">
+                        <div style="text-align: center; color: #b0b0b0; margin-top: 80px;">
+                            Select markets and start analysis to view results
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Best Opportunities</label>
+                    <div class="market-info" id="bestOpportunities">
+                        <div class="info-item">
+                            <div class="info-value" id="bestUptrend">--</div>
+                            <div class="info-label">Strongest Uptrend</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-value" id="bestDowntrend">--</div>
+                            <div class="info-label">Strongest Downtrend</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-value" id="highestConfidence">--</div>
+                            <div class="info-label">Highest Confidence</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Scanning Progress</label>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="scanningProgress"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 5: Statistics -->
+            <div class="panel">
+                <div class="panel-header">Statistics</div>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="hlTotalTrades">0</div>
+                        <div class="stat-label">Total Trades</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value positive" id="hlWins">0</div>
+                        <div class="stat-label">Wins</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value negative" id="hlLosses">0</div>
+                        <div class="stat-label">Losses</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="hlWinRate">0%</div>
+                        <div class="stat-label">Win Rate</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="hlRunningPL">$0.00</div>
+                        <div class="stat-label">Running P&L</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value negative" id="hlMaxDrawdown">$0.00</div>
+                        <div class="stat-label">Max Drawdown</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 15px; text-align: center;">
+                    <button class="btn btn-secondary" id="hlClearStatsBtn">Clear Stats</button>
+                </div>
+            </div>
+
+            <!-- Panel 6: Controls & Log -->
+            <div class="panel">
+                <div class="panel-header">Controls & Log</div>
+                
+                <div class="controls">
+                    <button class="btn btn-success" id="hlRunBtn">▶️ Run</button>
+                    <button class="btn btn-danger" id="hlStopBtn" disabled>⏹️ Stop</button>
+                    <button class="btn btn-primary" id="hlPlaceTradeBtn">📈 Place Trade</button>
+                    <button class="btn btn-primary" id="hlConnectBtn">🔗 Connect</button>
+                    <button class="btn btn-secondary" id="hlClearLogBtn">📊 Clear Log</button>
+                    <button class="btn btn-secondary" id="hlExportLogBtn">⬇️ Export</button>
+                </div>
+
+                <div class="log-container" id="hlLogContainer">
+                    <div class="log-entry log-info">
+                        <span>[00:00:00]</span> Higher/Lower Hedger Tool initialized
+                    </div>
+                    <div class="log-entry log-info">
+                        <span>[00:00:00]</span> Ready to connect to Deriv API
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class HigherLowerHedger {
+            constructor() {
+                this.ws = null;
+                this.isConnected = false;
+                this.isRunning = false;
+                this.balance = 0;
+                this.currentTick = 0;
+                this.tickHistory = [];
+                this.currentStake = 0;
+                this.martingaleStep = 0;
+                this.isFirstTrade = true;
+                this.stats = {
+                    totalTrades: 0,
+                    wins: 0,
+                    losses: 0,
+                    runningPL: 0,
+                    maxDrawdown: 0,
+                    startingBalance: 0
+                };
+                this.hedgeContracts = new Map();
+                this.activeContracts = new Map();
+                this.contractProgress = 0;
+                this.pendingProposal = null;
+                this.hedgeProposals = [];
+                this.contractResults = [];
+                this.marketSwitcher = {
+                    enabled: false,
+                    currentMarketIndex: 0,
+                    tradesInCurrentMarket: 0,
+                    markets: ['1HZ10V', '1HZ15V', '1HZ25V', '1HZ30V', '1HZ50V', '1HZ75V', '1HZ90V', '1HZ100V', 'R_10', 'R_25', 'R_50', 'R_75', 'R_100']
+                };
+                this.advancedMode = {
+                    enabled: false,
+                    analyzing: false,
+                    autoTrade: false,
+                    trendData: null,
+                    priceHistory: [],
+                    indicators: {},
+                    multiMarket: {
+                        scanning: false,
+                        marketData: new Map(),
+                        subscriptions: new Map(),
+                        results: []
+                    }
+                };
+                
+                this.loadFromLocalStorage();
+                this.initializeEventListeners();
+                this.updateUI();
+                this.log('Higher/Lower Hedger Tool initialized', 'info');
+                this.log('Ready to connect to Deriv API', 'info');
+            }
+
+            loadFromLocalStorage() {
+                try {
+                    // Load API token
+                    const savedToken = localStorage.getItem('hlHedger_apiToken');
+                    if (savedToken) {
+                        const tokenInput = document.getElementById('hlApiToken');
+                        if (tokenInput) {
+                            tokenInput.value = savedToken;
+                            this.log('API token loaded from storage', 'info');
+                        }
+                    }
+
+                    // Load price history for advanced mode
+                    const savedPriceHistory = localStorage.getItem('hlHedger_priceHistory');
+                    if (savedPriceHistory) {
+                        const parsedHistory = JSON.parse(savedPriceHistory);
+                        if (Array.isArray(parsedHistory) && parsedHistory.length > 0) {
+                            this.advancedMode.priceHistory = parsedHistory;
+                            this.log(`Loaded ${parsedHistory.length} historical price points from storage`, 'success');
+                        }
+                    }
+
+                    // Load multi-market data
+                    const savedMultiMarketData = localStorage.getItem('hlHedger_multiMarketData');
+                    if (savedMultiMarketData) {
+                        const parsedData = JSON.parse(savedMultiMarketData);
+                        if (parsedData && typeof parsedData === 'object') {
+                            Object.keys(parsedData).forEach(market => {
+                                if (parsedData[market] && Array.isArray(parsedData[market].priceHistory)) {
+                                    this.advancedMode.multiMarket.subscriptions.set(market, {
+                                        subscribed: false,
+                                        priceHistory: parsedData[market].priceHistory,
+                                        lastAnalysis: null
+                                    });
+                                }
+                            });
+                            this.log(`Loaded multi-market data for ${Object.keys(parsedData).length} markets`, 'success');
+                        }
+                    }
+
+                    // Load settings
+                    const savedSettings = localStorage.getItem('hlHedger_settings');
+                    if (savedSettings) {
+                        const settings = JSON.parse(savedSettings);
+                        this.applySettings(settings);
+                    }
+
+                } catch (error) {
+                    this.log('Error loading from localStorage: ' + error.message, 'warning');
+                }
+            }
+
+            saveToLocalStorage() {
+                try {
+                    // Save API token
+                    const tokenInput = document.getElementById('hlApiToken');
+                    if (tokenInput && tokenInput.value.trim()) {
+                        localStorage.setItem('hlHedger_apiToken', tokenInput.value.trim());
+                    }
+
+                    // Save price history (limit to last 1000 points to avoid storage limits)
+                    if (this.advancedMode.priceHistory.length > 0) {
+                        const historyToSave = this.advancedMode.priceHistory.slice(0, 1000);
+                        localStorage.setItem('hlHedger_priceHistory', JSON.stringify(historyToSave));
+                    }
+
+                    // Save multi-market data
+                    const multiMarketData = {};
+                    this.advancedMode.multiMarket.subscriptions.forEach((data, market) => {
+                        if (data.priceHistory && data.priceHistory.length > 0) {
+                            multiMarketData[market] = {
+                                priceHistory: data.priceHistory.slice(0, 500) // Limit per market
+                            };
+                        }
+                    });
+                    if (Object.keys(multiMarketData).length > 0) {
+                        localStorage.setItem('hlHedger_multiMarketData', JSON.stringify(multiMarketData));
+                    }
+
+                    // Save current settings
+                    const settings = this.getCurrentSettings();
+                    localStorage.setItem('hlHedger_settings', JSON.stringify(settings));
+
+                } catch (error) {
+                    this.log('Error saving to localStorage: ' + error.message, 'warning');
+                }
+            }
+
+            getCurrentSettings() {
+                return {
+                    market: document.getElementById('hlMarketSelect')?.value,
+                    initialStake: document.getElementById('hlInitialStake')?.value,
+                    regularStake: document.getElementById('hlStake')?.value,
+                    duration: document.getElementById('hlDuration')?.value,
+                    takeProfit: document.getElementById('hlTakeProfit')?.value,
+                    stopLoss: document.getElementById('hlStopLoss')?.value,
+                    martingaleMultiplier: document.getElementById('hlMartingaleMultiplier')?.value,
+                    maxSteps: document.getElementById('hlMaxSteps')?.value,
+                    tradeDelay: document.getElementById('hlTradeDelay')?.value,
+                    barrierValue: document.getElementById('barrierValue')?.value,
+                    hedgeHigherBarrier: document.getElementById('hedgeHigherBarrier')?.value,
+                    hedgeLowerBarrier: document.getElementById('hedgeLowerBarrier')?.value,
+                    analysisDepth: document.getElementById('analysisDepth')?.value,
+                    trendThreshold: document.getElementById('trendThreshold')?.value
+                };
+            }
+
+            applySettings(settings) {
+                if (!settings) return;
+                
+                Object.keys(settings).forEach(key => {
+                    const element = document.getElementById(key === 'market' ? 'hlMarketSelect' : 
+                                                        key === 'initialStake' ? 'hlInitialStake' :
+                                                        key === 'regularStake' ? 'hlStake' :
+                                                        key === 'duration' ? 'hlDuration' :
+                                                        key === 'takeProfit' ? 'hlTakeProfit' :
+                                                        key === 'stopLoss' ? 'hlStopLoss' :
+                                                        key === 'martingaleMultiplier' ? 'hlMartingaleMultiplier' :
+                                                        key === 'maxSteps' ? 'hlMaxSteps' :
+                                                        key === 'tradeDelay' ? 'hlTradeDelay' :
+                                                        key);
+                    if (element && settings[key] !== undefined) {
+                        element.value = settings[key];
+                    }
+                });
+            }
+
+            initializeEventListeners() {
+                // Connection buttons
+                document.getElementById('hlHeaderConnectBtn').addEventListener('click', () => this.connect());
+                document.getElementById('hlConnectBtn').addEventListener('click', () => this.connect());
+                
+                // Control buttons
+                document.getElementById('hlRunBtn').addEventListener('click', () => this.startBot());
+                document.getElementById('hlStopBtn').addEventListener('click', () => this.stopBot());
+                document.getElementById('hlPlaceTradeBtn').addEventListener('click', () => this.placeTradeNow());
+                
+                // Utility buttons
+                document.getElementById('hlClearStatsBtn').addEventListener('click', () => this.clearStats());
+                document.getElementById('hlClearLogBtn').addEventListener('click', () => this.clearLog());
+                document.getElementById('hlExportLogBtn').addEventListener('click', () => this.exportLog());
+                
+
+                
+                // Market switcher toggle
+                document.getElementById('hlMarketSwitcher').addEventListener('change', (e) => this.toggleMarketSwitcher(e.target.checked));
+                
+                // Hedge mode toggle
+                document.getElementById('hlHedgeMode').addEventListener('change', (e) => this.toggleHedgeMode(e.target.checked));
+                
+                // Advanced mode toggle
+                document.getElementById('hlAdvancedMode').addEventListener('change', (e) => this.toggleAdvancedMode(e.target.checked));
+                
+                // Advanced mode buttons
+                document.getElementById('hlAnalyzeOnlyBtn').addEventListener('click', () => this.startAnalysis(false));
+                document.getElementById('hlAnalyzeTradeBtn').addEventListener('click', () => this.startAnalysis(true));
+                
+                // Save settings when inputs change
+                document.getElementById('hlApiToken').addEventListener('input', () => this.saveToLocalStorage());
+                document.getElementById('hlMarketSelect').addEventListener('change', () => this.saveToLocalStorage());
+                document.getElementById('hlInitialStake').addEventListener('input', () => this.saveToLocalStorage());
+                document.getElementById('hlStake').addEventListener('input', () => this.saveToLocalStorage());
+                document.getElementById('hlDuration').addEventListener('input', () => this.saveToLocalStorage());
+                document.getElementById('hlTakeProfit').addEventListener('input', () => this.saveToLocalStorage());
+                document.getElementById('hlStopLoss').addEventListener('input', () => this.saveToLocalStorage());
+                document.getElementById('barrierValue').addEventListener('input', () => this.saveToLocalStorage());
+                document.getElementById('hedgeHigherBarrier').addEventListener('input', () => this.saveToLocalStorage());
+                document.getElementById('hedgeLowerBarrier').addEventListener('input', () => this.saveToLocalStorage());
+                document.getElementById('analysisDepth').addEventListener('input', () => this.saveToLocalStorage());
+                document.getElementById('trendThreshold').addEventListener('input', () => this.saveToLocalStorage());
+                
+                // Market selection buttons
+                document.getElementById('selectAllMarketsBtn').addEventListener('click', () => this.selectAllMarkets());
+                document.getElementById('clearAllMarketsBtn').addEventListener('click', () => this.clearAllMarkets());
+                
+                // Menu functionality
+                document.getElementById('menuBtn').addEventListener('click', () => this.toggleMenu());
+                document.getElementById('advancedHedgerMenuItem').addEventListener('click', () => this.openAdvancedHedgerTool());
+                
+                // Close menu when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.menu-container')) {
+                        document.getElementById('menuDropdown').style.display = 'none';
+                    }
+                });
+            }
+
+            async connect() {
+                if (this.isConnected) {
+                    this.log('Already connected to Deriv API', 'warning');
+                    return;
+                }
+
+                try {
+                    this.log('Connecting to Deriv API...', 'info');
+                    this.ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089');
+                    
+                    this.ws.onopen = () => {
+                        this.log('WebSocket connection established', 'success');
+                        this.authorize();
+                    };
+                    
+                    this.ws.onmessage = (event) => {
+                        this.handleMessage(JSON.parse(event.data));
+                    };
+                    
+                    this.ws.onclose = () => {
+                        this.isConnected = false;
+                        this.log('WebSocket connection closed', 'error');
+                        this.updateConnectionStatus();
+                    };
+                    
+                    this.ws.onerror = (error) => {
+                        this.log('WebSocket error: ' + error.message, 'error');
+                    };
+                    
+                } catch (error) {
+                    this.log('Connection failed: ' + error.message, 'error');
+                }
+            }
+
+            authorize() {
+                const apiToken = document.getElementById('hlApiToken').value.trim();
+                
+                if (!apiToken) {
+                    this.log('Please enter your API token first', 'error');
+                    this.log('Using demo mode instead', 'warning');
+                    // Simulate connection for demo
+                    this.isConnected = true;
+                    this.balance = 10000; // Demo balance
+                    this.stats.startingBalance = this.balance;
+                    this.updateConnectionStatus();
+                    this.subscribeToTicks();
+                    this.simulateTicks(); // Start tick simulation for demo
+                    return;
+                }
+                
+                const authMessage = {
+                    authorize: apiToken
+                };
+                this.sendMessage(authMessage);
+                this.log('Authorizing with provided API token...', 'info');
+            }
+
+            sendMessage(message) {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify(message));
+                } else {
+                    this.log('WebSocket not connected', 'error');
+                }
+            }
+
+            handleMessage(data) {
+                switch (data.msg_type) {
+                    case 'authorize':
+                        if (data.error) {
+                            this.log('Authorization failed: ' + data.error.message, 'error');
+                            this.log('Please check your API token and try again', 'warning');
+                            this.isConnected = false;
+                            this.updateConnectionStatus();
+                        } else {
+                            this.log('Authorization successful', 'success');
+                            this.isConnected = true;
+                            this.balance = data.authorize.balance;
+                            this.stats.startingBalance = this.balance;
+                            this.updateConnectionStatus();
+                            this.subscribeToTicks();
+                            this.getBalance(); // Get current balance
+                        }
+                        break;
+                        
+                    case 'tick':
+                        this.handleTick(data.tick);
+                        break;
+                        
+                    case 'balance':
+                        this.balance = data.balance.balance;
+                        this.updateUI();
+                        break;
+                        
+                    case 'proposal':
+                        this.handleProposal(data);
+                        break;
+                        
+                    case 'buy':
+                        this.handleBuy(data);
+                        break;
+                        
+                    case 'proposal_open_contract':
+                        this.handleContractUpdate(data);
+                        break;
+                        
+                    default:
+                        if (data.error) {
+                            this.log('API Error: ' + data.error.message, 'error');
+                        }
+                        break;
+                }
+            }
+
+            subscribeToTicks() {
+                const market = this.getCurrentMarket();
+                const tickMessage = {
+                    ticks: market,
+                    subscribe: 1
+                };
+                this.sendMessage(tickMessage);
+                this.log(`Subscribed to ${market} ticks`, 'success');
+            }
+
+            getCurrentMarket() {
+                if (this.marketSwitcher.enabled) {
+                    return this.marketSwitcher.markets[this.marketSwitcher.currentMarketIndex];
+                } else {
+                    return document.getElementById('hlMarketSelect').value;
+                }
+            }
+
+            switchToNextMarket() {
+                if (!this.marketSwitcher.enabled) return;
+                
+                this.marketSwitcher.currentMarketIndex = (this.marketSwitcher.currentMarketIndex + 1) % this.marketSwitcher.markets.length;
+                this.marketSwitcher.tradesInCurrentMarket = 0;
+                
+                const newMarket = this.getCurrentMarket();
+                document.getElementById('hlMarketSelect').value = newMarket;
+                
+                this.log(`Switched to market: ${newMarket}`, 'success');
+                
+                // Resubscribe to new market ticks
+                this.subscribeToTicks();
+            }
+
+            checkMarketSwitch() {
+                if (!this.marketSwitcher.enabled) return;
+                
+                const tradesPerMarket = parseInt(document.getElementById('tradesPerMarket').value) || 5;
+                
+                if (this.marketSwitcher.tradesInCurrentMarket >= tradesPerMarket) {
+                    this.log(`Completed ${tradesPerMarket} trades in current market`, 'info');
+                    this.switchToNextMarket();
+                }
+            }
+
+            getBalance() {
+                const balanceMessage = {
+                    balance: 1,
+                    subscribe: 1
+                };
+                this.sendMessage(balanceMessage);
+            }
+
+            simulateTicks() {
+                if (!this.isConnected) return;
+
+                setInterval(() => {
+                    const basePrice = 100.0;
+                    const volatility = 0.01;
+                    const change = (Math.random() - 0.5) * volatility;
+                    const simulatedPrice = basePrice + change;
+                    
+                    const simulatedTick = {
+                        quote: simulatedPrice,
+                        epoch: Date.now() / 1000
+                    };
+                    
+                    this.handleTick(simulatedTick);
+                }, 1000);
+            }
+
+            handleTick(tick) {
+                this.currentTick = parseFloat(tick.quote);
+                this.tickHistory.unshift({
+                    price: this.currentTick,
+                    time: new Date(tick.epoch * 1000)
+                });
+                
+                // Keep only last 50 ticks for display
+                if (this.tickHistory.length > 50) {
+                    this.tickHistory.pop();
+                }
+                
+                // Store extended price history for advanced analysis
+                if (this.advancedMode.enabled) {
+                    this.advancedMode.priceHistory.unshift(this.currentTick);
+                    const maxHistory = parseInt(document.getElementById('analysisDepth').value) || 200;
+                    if (this.advancedMode.priceHistory.length > maxHistory) {
+                        this.advancedMode.priceHistory.pop();
+                    }
+                    
+                    // Store tick data for multi-market analysis
+                    if (this.advancedMode.multiMarket.scanning && tick.symbol) {
+                        const marketData = this.advancedMode.multiMarket.subscriptions.get(tick.symbol);
+                        if (marketData) {
+                            marketData.priceHistory.unshift(this.currentTick);
+                            const maxHistory = parseInt(document.getElementById('analysisDepth').value) || 200;
+                            if (marketData.priceHistory.length > maxHistory) {
+                                marketData.priceHistory.pop();
+                            }
+                        }
+                    }
+                    
+                    // Save to localStorage periodically (every 10 ticks to avoid performance issues)
+                    if (this.advancedMode.priceHistory.length % 10 === 0) {
+                        this.saveToLocalStorage();
+                    }
+                    
+                    // Continuous analysis if in auto-trade mode
+                    if (this.advancedMode.autoTrade && this.advancedMode.priceHistory.length >= 50 && !this.advancedMode.multiMarket.scanning) {
+                        this.performTrendAnalysis();
+                        
+                        // Check for additional trading opportunities after each analysis
+                        if (this.advancedMode.trendData && this.activeContracts.size === 0) {
+                            this.checkForAdditionalTrades();
+                        }
+                    }
+                }
+                
+                this.updateUI();
+            }
+
+            handleProposal(data) {
+                if (data.error) {
+                    this.log('Proposal error: ' + data.error.message, 'error');
+                    return;
+                }
+                
+                if (data.proposal) {
+                    this.log(`Proposal received: ${data.proposal.display_name} - Payout: $${data.proposal.payout}`, 'info');
+                    
+                    // Handle hedge mode proposals (both regular and AI hedge)
+                    if (this.pendingProposal && this.pendingProposal.isHedge && data.echo_req) {
+                        const reqId = data.echo_req.req_id;
+                        
+                        // Check if this proposal belongs to our hedge trade
+                        if (reqId === this.pendingProposal.higherReqId || reqId === this.pendingProposal.lowerReqId) {
+                            const contractType = reqId === this.pendingProposal.higherReqId ? 'HIGHER' : 'LOWER';
+                            
+                            this.hedgeProposals.push({
+                                id: data.proposal.id,
+                                type: contractType,
+                                contract_type: data.proposal.contract_type,
+                                req_id: reqId,
+                                payout: data.proposal.payout
+                            });
+                            
+                            const tradeType = this.pendingProposal.isAITrade ? 'AI Hedge' : 'Hedge';
+                            this.log(`${tradeType} proposal stored: ${contractType} (${this.hedgeProposals.length}/2)`, 'info');
+                            
+                            // If we have both proposals, buy them EXACTLY simultaneously
+                            if (this.hedgeProposals.length === 2) {
+                                this.log(`Both ${tradeType.toLowerCase()} proposals received - executing SIMULTANEOUS purchase...`, 'success');
+                                
+                                // Buy both contracts at EXACTLY the same time - no delays
+                                this.hedgeProposals.forEach((proposal) => {
+                                    this.buyContract(proposal.id);
+                                    this.log(`Purchasing ${proposal.type} contract: ${proposal.id}`, 'info');
+                                });
+                                
+                                // Reset hedge state
+                                this.hedgeProposals = [];
+                                this.pendingProposal = null;
+                            }
+                        }
+                    } else if (this.pendingProposal && !this.pendingProposal.isHedge && data.echo_req && data.echo_req.req_id === this.pendingProposal.req_id) {
+                        // Single trade mode - only execute if NOT in hedge mode
+                        this.buyContract(data.proposal.id);
+                        this.pendingProposal = null;
+                    }
+                }
+            }
+
+            handleBuy(data) {
+                if (data.error) {
+                    this.log('Buy error: ' + data.error.message, 'error');
+                    return;
+                }
+                
+                if (data.buy) {
+                    this.log(`Contract purchased: ${data.buy.contract_id} - Cost: $${data.buy.buy_price}`, 'success');
+                    this.activeContracts.set(data.buy.contract_id, {
+                        id: data.buy.contract_id,
+                        cost: data.buy.buy_price,
+                        startTime: Date.now()
+                    });
+                    
+                    // Subscribe to contract updates
+                    this.subscribeToContract(data.buy.contract_id);
+                }
+            }
+
+            handleContractUpdate(data) {
+                if (data.error) {
+                    this.log('Contract update error: ' + data.error.message, 'error');
+                    return;
+                }
+                
+                if (data.proposal_open_contract) {
+                    const contract = data.proposal_open_contract;
+                    
+                    if (contract.is_sold) {
+                        this.handleContractResult(contract);
+                    } else {
+                        // Update progress
+                        this.updateContractProgressReal(contract);
+                    }
+                }
+            }
+
+            handleContractResult(contract) {
+                const contractId = contract.contract_id;
+                const activeContract = this.activeContracts.get(contractId);
+                
+                if (!activeContract) return;
+                
+                const cost = parseFloat(activeContract.cost);
+                const payout = parseFloat(contract.sell_price || 0);
+                const profit = payout - cost;
+                
+                // Check if hedge mode is currently enabled
+                const hedgeMode = document.getElementById('hlHedgeMode');
+                const isHedgeMode = hedgeMode && hedgeMode.checked;
+                
+                // Store contract result for hedge mode tracking
+                if (!this.contractResults) {
+                    this.contractResults = [];
+                }
+                
+                this.contractResults.push({
+                    contractId: contractId,
+                    profit: profit,
+                    cost: cost,
+                    payout: payout,
+                    timestamp: Date.now()
+                });
+                
+                if (profit > 0) {
+                    this.log(`Contract WON! ID: ${contractId} - Profit: $${profit.toFixed(2)}`, 'success');
+                } else {
+                    this.log(`Contract LOST! ID: ${contractId} - Loss: $${profit.toFixed(2)}`, 'error');
+                }
+                
+                this.activeContracts.delete(contractId);
+                
+                // Handle martingale logic based on mode
+                if (isHedgeMode) {
+                    // In hedge mode, wait for both contracts to complete
+                    if (this.activeContracts.size === 0) {
+                        // All hedge contracts completed, evaluate overall result
+                        this.evaluateHedgeResult();
+                    }
+                } else {
+                    // Single trade mode - immediate evaluation
+                    this.stats.totalTrades++;
+                    this.isFirstTrade = false; // Mark first trade as completed
+                    
+                    if (profit > 0) {
+                        this.stats.wins++;
+                        this.martingaleStep = 0; // Reset martingale on win
+                    } else {
+                        this.stats.losses++;
+                        this.martingaleStep++; // Increase martingale on loss
+                    }
+                    
+                    this.stats.runningPL += profit;
+                    this.updateDrawdown();
+                    this.updateUI();
+                    
+                    // Count trade for market switcher
+                    if (this.marketSwitcher.enabled) {
+                        this.marketSwitcher.tradesInCurrentMarket++;
+                        this.checkMarketSwitch();
+                    }
+                    
+                    // Check stop conditions - if any condition is met, don't schedule next trade
+                    const shouldStop = this.checkStopConditions();
+                    if (!shouldStop) {
+                        this.scheduleNextTrade();
+                    }
+                }
+                
+                this.contractProgress = 0;
+                document.getElementById('hlContractProgress').style.width = '0%';
+            }
+
+            updateContractProgressReal(contract) {
+                if (contract.date_start && contract.date_expiry) {
+                    const now = Date.now() / 1000;
+                    const start = contract.date_start;
+                    const expiry = contract.date_expiry;
+                    const progress = ((now - start) / (expiry - start)) * 100;
+                    
+                    this.contractProgress = Math.min(100, Math.max(0, progress));
+                    document.getElementById('hlContractProgress').style.width = this.contractProgress + '%';
+                }
+            }
+
+            evaluateHedgeResult() {
+                if (!this.contractResults || this.contractResults.length === 0) return;
+                
+                // Get the most recent contracts (should be 2 for hedge)
+                const recentResults = this.contractResults.slice(-2);
+                const totalProfit = recentResults.reduce((sum, result) => sum + result.profit, 0);
+                const totalCost = recentResults.reduce((sum, result) => sum + result.cost, 0);
+                
+                this.stats.totalTrades++;
+                this.isFirstTrade = false; // Mark first trade as completed
+                
+                if (totalProfit > 0) {
+                    this.stats.wins++;
+                    this.martingaleStep = 0; // Reset martingale only when BOTH contracts result in overall profit
+                    this.log(`🔄 HEDGE TRADE WON! Total Profit: $${totalProfit.toFixed(2)} (Both contracts evaluated)`, 'success');
+                } else {
+                    this.stats.losses++;
+                    this.martingaleStep++; // Increase martingale only when BOTH contracts result in overall loss
+                    this.log(`🔄 HEDGE TRADE LOST! Total Loss: $${totalProfit.toFixed(2)} (Both contracts evaluated)`, 'error');
+                }
+                
+                this.stats.runningPL += totalProfit;
+                this.updateDrawdown();
+                this.updateUI();
+                
+                // Count trade for market switcher
+                if (this.marketSwitcher.enabled) {
+                    this.marketSwitcher.tradesInCurrentMarket++;
+                    this.checkMarketSwitch();
+                }
+                
+                // Clear contract results for next hedge trade
+                this.contractResults = [];
+                
+                // Check stop conditions - if any condition is met, don't schedule next trade
+                const shouldStop = this.checkStopConditions();
+                if (!shouldStop) {
+                    this.scheduleNextTrade();
+                }
+            }
+
+            updateDrawdown() {
+                const currentBalance = this.balance + this.stats.runningPL;
+                const drawdown = this.stats.startingBalance - currentBalance;
+                if (drawdown > this.stats.maxDrawdown) {
+                    this.stats.maxDrawdown = drawdown;
+                }
+            }
+
+            scheduleNextTrade() {
+                if (this.isRunning) {
+                    const delaySeconds = parseInt(document.getElementById('hlTradeDelay').value) || 5;
+                    const delayMs = delaySeconds * 1000;
+                    
+                    this.log(`Next trade in ${delaySeconds} seconds...`, 'info');
+                    setTimeout(() => {
+                        this.placeTradeNow();
+                    }, delayMs);
+                }
+            }
+
+            subscribeToContract(contractId) {
+                const subscribeMessage = {
+                    proposal_open_contract: 1,
+                    contract_id: contractId,
+                    subscribe: 1
+                };
+                this.sendMessage(subscribeMessage);
+            }
+
+            buyContract(proposalId) {
+                const buyMessage = {
+                    buy: proposalId,
+                    price: this.currentStake || parseFloat(document.getElementById('hlStake').value)
+                };
+                this.sendMessage(buyMessage);
+                this.log('Purchasing contract...', 'info');
+            }
+
+            async placeTradeNow() {
+                if (!this.isConnected) {
+                    this.log('Not connected to API', 'error');
+                    return;
+                }
+                
+                // Check if hedge mode is enabled
+                const hedgeMode = document.getElementById('hlHedgeMode');
+                const isHedgeMode = hedgeMode && hedgeMode.checked;
+                let stake;
+                
+                // Determine stake based on whether it's first trade or not
+                if (this.isFirstTrade) {
+                    stake = this.currentStake || parseFloat(document.getElementById('hlInitialStake').value);
+                    this.log(`Using INITIAL stake for first trade: $${stake}`, 'info');
+                } else {
+                    stake = this.currentStake || parseFloat(document.getElementById('hlStake').value);
+                }
+                
+                const duration = parseInt(document.getElementById('hlDuration').value);
+                
+                // Check balance based on mode
+                const requiredBalance = isHedgeMode ? stake * 2 : stake;
+                if (requiredBalance > this.balance) {
+                    this.log(`Insufficient balance for trade (Required: $${requiredBalance.toFixed(2)}, Available: $${this.balance.toFixed(2)})`, 'error');
+                    return;
+                }
+                
+                // Clear any pending proposals to avoid conflicts
+                this.pendingProposal = null;
+                this.hedgeProposals = [];
+                
+                if (isHedgeMode) {
+                    const totalStake = stake * 2;
+                    this.log(`Placing HEDGE trade - Individual Stake: $${stake}, Total Stake: $${totalStake}, Duration: ${duration} ticks`, 'info');
+                    this.placeHedgeTrade();
+                } else {
+                    const direction = document.querySelector('input[name="direction"]:checked').value;
+                    const barrierType = document.querySelector('input[name="barrierType"]:checked').value;
+                    const barrierValue = parseFloat(document.getElementById('barrierValue').value);
+                    
+                    this.log(`Placing SINGLE ${direction.toUpperCase()} trade - Stake: $${stake}, Duration: ${duration} ticks`, 'info');
+                    this.placeSingleTrade(direction, stake, duration, barrierType, barrierValue);
+                }
+            }
+
+            placeSingleTrade(direction, stake, duration, barrierType, barrierValue) {
+                this.currentStake = stake;
+                
+                const market = this.getCurrentMarket();
+                const contractType = direction === 'higher' ? 'CALL' : 'PUT';
+                
+                let proposalRequest = {
+                    proposal: 1,
+                    amount: stake,
+                    basis: 'stake',
+                    contract_type: contractType,
+                    currency: 'USD',
+                    symbol: market,
+                    duration: duration,
+                    duration_unit: 't',
+                    req_id: Date.now()
+                };
+                
+                // Add barrier if specified
+                if (barrierType !== 'fixed') {
+                    if (barrierType === 'above') {
+                        proposalRequest.barrier = `+${barrierValue}`;
+                    } else if (barrierType === 'below') {
+                        proposalRequest.barrier = `-${barrierValue}`;
+                    }
+                }
+                
+                this.pendingProposal = { req_id: proposalRequest.req_id };
+                this.sendMessage(proposalRequest);
+                this.log(`Requesting ${direction.toUpperCase()} proposal - Stake: $${stake}, Duration: ${duration} ticks`, 'info');
+            }
+
+            placeHedgeTrade() {
+                let baseStake;
+                
+                // Use initial stake for first trade, regular stake for subsequent trades
+                if (this.isFirstTrade) {
+                    baseStake = this.currentStake || parseFloat(document.getElementById('hlInitialStake').value);
+                } else {
+                    baseStake = this.currentStake || parseFloat(document.getElementById('hlStake').value);
+                }
+                
+                const stake = baseStake; // Use FULL stake for EACH contract (total = 2x stake)
+                const duration = parseInt(document.getElementById('hlDuration').value);
+                const higherBarrierOffset = parseFloat(document.getElementById('hedgeHigherBarrier').value);
+                const lowerBarrierOffset = parseFloat(document.getElementById('hedgeLowerBarrier').value);
+                const higherBarrierType = document.getElementById('hedgeHigherBarrierType').value;
+                const lowerBarrierType = document.getElementById('hedgeLowerBarrierType').value;
+                const market = this.getCurrentMarket();
+                
+                this.currentStake = baseStake * 2; // Total stake is 2x for hedge
+                this.hedgeProposals = []; // Reset hedge proposals array
+                
+                // Use selected barrier types (+ or -)
+                const higherBarrier = `${higherBarrierType}${higherBarrierOffset}`;
+                const lowerBarrier = `${lowerBarrierType}${lowerBarrierOffset}`;
+                
+                const baseReqId = Date.now();
+                
+                // Place HIGHER trade (CALL with custom barrier)
+                const higherProposal = {
+                    proposal: 1,
+                    amount: stake,
+                    basis: 'stake',
+                    contract_type: 'CALL',
+                    currency: 'USD',
+                    symbol: market,
+                    duration: duration,
+                    duration_unit: 't',
+                    barrier: higherBarrier,
+                    req_id: baseReqId
+                };
+                
+                // Place LOWER trade (PUT with custom barrier)
+                const lowerProposal = {
+                    proposal: 1,
+                    amount: stake,
+                    basis: 'stake',
+                    contract_type: 'PUT',
+                    currency: 'USD',
+                    symbol: market,
+                    duration: duration,
+                    duration_unit: 't',
+                    barrier: lowerBarrier,
+                    req_id: baseReqId + 1
+                };
+                
+                // Mark as hedge mode with both request IDs
+                this.pendingProposal = { 
+                    req_id: baseReqId, 
+                    isHedge: true,
+                    expectedProposals: 2,
+                    higherReqId: baseReqId,
+                    lowerReqId: baseReqId + 1
+                };
+                
+                this.log(`Requesting hedge proposals: CALL barrier ${higherBarrier} & PUT barrier ${lowerBarrier} - $${stake} EACH (Total: $${this.currentStake})`, 'info');
+                
+                // Send both proposals SIMULTANEOUSLY - no delays
+                this.sendMessage(higherProposal);
+                this.sendMessage(lowerProposal);
+            }
+
+            startBot() {
+                if (!this.isConnected) {
+                    this.log('Connect to API first', 'error');
+                    return;
+                }
+                
+                this.isRunning = true;
+                this.isFirstTrade = true; // Reset first trade flag when starting bot
+                this.log('Bot started - Auto trading enabled', 'success');
+                this.updateControlButtons();
+                
+                // Start first trade
+                this.placeTradeNow();
+            }
+
+            stopBot() {
+                this.isRunning = false;
+                
+                // Stop analysis mode if active
+                if (this.advancedMode.analyzing || this.advancedMode.autoTrade) {
+                    this.advancedMode.analyzing = false;
+                    this.advancedMode.autoTrade = false;
+                    this.stopMultiMarketScanning();
+                    this.log('🛑 Analysis & Trading stopped by user', 'warning');
+                } else {
+                    this.log('Bot stopped - Auto trading disabled', 'warning');
+                }
+                
+                this.updateControlButtons();
+            }
+
+            checkStopConditions() {
+                const takeProfit = parseFloat(document.getElementById('hlTakeProfit').value);
+                const stopLoss = parseFloat(document.getElementById('hlStopLoss').value);
+                const maxSteps = parseInt(document.getElementById('hlMaxSteps').value);
+                
+                // Check take profit condition
+                if (this.stats.runningPL >= takeProfit) {
+                    this.log(`🎯 TAKE PROFIT REACHED: $${this.stats.runningPL.toFixed(2)} (Target: $${takeProfit.toFixed(2)})`, 'success');
+                    this.log('🛑 Bot stopped automatically due to take profit', 'success');
+                    this.stopBot();
+                    return true; // Stop further processing
+                }
+                
+                // Check stop loss condition
+                if (this.stats.runningPL <= -stopLoss) {
+                    this.log(`🚨 STOP LOSS REACHED: $${this.stats.runningPL.toFixed(2)} (Limit: -$${stopLoss.toFixed(2)})`, 'error');
+                    this.log('🛑 Bot stopped automatically due to stop loss', 'error');
+                    this.stopBot();
+                    return true; // Stop further processing
+                }
+                
+                // Check max martingale steps
+                if (this.martingaleStep >= maxSteps) {
+                    this.log(`⚠️ MAX MARTINGALE STEPS REACHED: ${this.martingaleStep} (Limit: ${maxSteps})`, 'warning');
+                    this.log('🛑 Bot stopped automatically due to max martingale steps', 'warning');
+                    this.stopBot();
+                    return true; // Stop further processing
+                }
+                
+                // Apply martingale if needed and bot is still running
+                if (this.martingaleStep > 0 && this.isRunning) {
+                    // Use regular stake as base for martingale calculations (not initial stake)
+                    const baseStake = parseFloat(document.getElementById('hlStake').value);
+                    const multiplier = parseFloat(document.getElementById('hlMartingaleMultiplier').value);
+                    this.currentStake = baseStake * Math.pow(multiplier, this.martingaleStep);
+                    this.log(`📈 Martingale step ${this.martingaleStep}: Stake increased to $${this.currentStake.toFixed(2)}`, 'warning');
+                }
+                
+                return false; // Continue trading
+            }
+
+
+
+            toggleMarketSwitcher(enabled) {
+                const marketSwitcherPanel = document.getElementById('marketSwitcherPanel');
+                const marketSelect = document.getElementById('hlMarketSelect');
+                
+                this.marketSwitcher.enabled = enabled;
+                
+                if (enabled) {
+                    marketSwitcherPanel.classList.add('active');
+                    marketSelect.disabled = true;
+                    marketSelect.style.opacity = '0.5';
+                    
+                    // Reset market switcher state
+                    this.marketSwitcher.currentMarketIndex = 0;
+                    this.marketSwitcher.tradesInCurrentMarket = 0;
+                    
+                    // Set initial market
+                    const initialMarket = this.marketSwitcher.markets[0];
+                    marketSelect.value = initialMarket;
+                    
+                    this.log('Market switcher enabled - Will rotate through all markets automatically', 'info');
+                    this.log(`Starting with market: ${initialMarket}`, 'info');
+                } else {
+                    marketSwitcherPanel.classList.remove('active');
+                    marketSelect.disabled = false;
+                    marketSelect.style.opacity = '1';
+                    
+                    this.log('Market switcher disabled - Manual market selection enabled', 'info');
+                }
+            }
+
+            toggleHedgeMode(enabled) {
+                const hedgePanel = document.getElementById('hlHedgePanel');
+                
+                if (enabled) {
+                    hedgePanel.classList.add('active');
+                    this.log('🔄 Hedge Mode enabled - Will place HIGHER + LOWER contracts simultaneously', 'success');
+                    this.log('Both contracts use same entry point and exit after 5 ticks', 'info');
+                } else {
+                    hedgePanel.classList.remove('active');
+                    this.log('Hedge Mode disabled - Single contract trading', 'info');
+                }
+            }
+
+            toggleAdvancedMode(enabled) {
+                const advancedPanel = document.getElementById('advancedPanel');
+                const trendAnalysisPanel = document.getElementById('trendAnalysisPanel');
+                const multiMarketPanel = document.getElementById('multiMarketPanel');
+                
+                this.advancedMode.enabled = enabled;
+                
+                if (enabled) {
+                    advancedPanel.classList.add('active');
+                    trendAnalysisPanel.style.display = 'block';
+                    multiMarketPanel.style.display = 'block';
+                    
+                    // Reset advanced mode state
+                    this.advancedMode.analyzing = false;
+                    this.advancedMode.autoTrade = false;
+                    this.advancedMode.priceHistory = [];
+                    this.advancedMode.indicators = {};
+                    this.advancedMode.multiMarket.scanning = false;
+                    this.advancedMode.multiMarket.marketData.clear();
+                    this.advancedMode.multiMarket.results = [];
+                    
+                    this.log('🧠 Advanced Trading Mode enabled - AI analysis available', 'success');
+                    this.log('Use "Analyze Only" to study trends or "Analyze & Trade" for automated trading', 'info');
+                } else {
+                    advancedPanel.classList.remove('active');
+                    trendAnalysisPanel.style.display = 'none';
+                    multiMarketPanel.style.display = 'none';
+                    
+                    // Stop any ongoing analysis
+                    this.advancedMode.analyzing = false;
+                    this.advancedMode.autoTrade = false;
+                    this.stopMultiMarketScanning();
+                    
+                    this.log('Advanced Trading Mode disabled', 'info');
+                }
+            }
+
+            startAnalysis(autoTrade = false) {
+                if (!this.isConnected) {
+                    this.log('Connect to API first to start analysis', 'error');
+                    return;
+                }
+
+                // Check if hedge mode is enabled for auto-trading
+                if (autoTrade) {
+                    const hedgeMode = document.getElementById('hlHedgeMode');
+                    if (!hedgeMode || !hedgeMode.checked) {
+                        this.log('❌ Analyze & Trade requires HEDGE MODE to be enabled!', 'error');
+                        this.log('Please enable Hedge Mode first, then try again', 'warning');
+                        return;
+                    }
+                    this.log('✅ Hedge Mode confirmed - AI will use hedge strategy for all trades', 'success');
+                }
+                
+                // Check if multi-market analysis is requested
+                const selectedMarkets = this.getSelectedMarkets();
+                
+                if (selectedMarkets.length > 1) {
+                    // Multi-market analysis
+                    this.startMultiMarketAnalysis(selectedMarkets, autoTrade);
+                } else if (selectedMarkets.length === 1) {
+                    // Single market analysis
+                    if (this.advancedMode.priceHistory.length < 50) {
+                        this.log('Collecting price data... Need at least 50 ticks for analysis', 'warning');
+                        return;
+                    }
+                    
+                    this.advancedMode.analyzing = true;
+                    this.advancedMode.autoTrade = autoTrade;
+                    
+                    if (autoTrade) {
+                        // Set running state for auto-trade mode to enable stop button
+                        this.isRunning = true;
+                        this.updateControlButtons();
+                        
+                        this.log('🚀 Starting AI Analysis & Auto-Trading with HEDGE MODE...', 'success');
+                        this.log('Will execute HIGHER + LOWER hedge trades when strong trends are detected', 'info');
+                        this.log('Using hedge barriers from Hedge Mode panel settings', 'info');
+                        this.log('Use the STOP button to halt analysis trading', 'info');
+                    } else {
+                        this.log('🔍 Starting Market Analysis (No Trading)...', 'info');
+                    }
+                    
+                    this.performTrendAnalysis();
+                } else {
+                    this.log('Please select at least one market to analyze', 'error');
+                }
+            }
+
+            getSelectedMarkets() {
+                const checkboxes = document.querySelectorAll('.market-checkboxes input[type="checkbox"]:checked');
+                return Array.from(checkboxes).map(cb => cb.value);
+            }
+
+            selectAllMarkets() {
+                const checkboxes = document.querySelectorAll('.market-checkboxes input[type="checkbox"]');
+                checkboxes.forEach(cb => cb.checked = true);
+                this.log('All markets selected for analysis', 'info');
+            }
+
+            clearAllMarkets() {
+                const checkboxes = document.querySelectorAll('.market-checkboxes input[type="checkbox"]');
+                checkboxes.forEach(cb => cb.checked = false);
+                this.log('All markets deselected', 'info');
+            }
+
+            startMultiMarketAnalysis(markets, autoTrade = false) {
+                this.advancedMode.multiMarket.scanning = true;
+                this.advancedMode.multiMarket.marketData.clear();
+                this.advancedMode.multiMarket.results = [];
+                
+                this.log(`🔍 Starting Multi-Market Analysis on ${markets.length} markets...`, 'success');
+                this.log(`Markets: ${markets.join(', ')}`, 'info');
+                
+                if (autoTrade) {
+                    // Set running state for multi-market auto-trade mode to enable stop button
+                    this.isRunning = true;
+                    this.updateControlButtons();
+                    
+                    this.log('Auto-trading enabled with HEDGE MODE - Will execute HIGHER + LOWER trades on best opportunities', 'info');
+                    this.log('Using hedge barriers from Hedge Mode panel settings', 'info');
+                    this.log('Use the STOP button to halt multi-market analysis trading', 'info');
+                }
+                
+                // Subscribe to all selected markets
+                markets.forEach(market => {
+                    this.subscribeToMarketForAnalysis(market);
+                });
+                
+                // Start analysis loop
+                this.multiMarketAnalysisLoop(autoTrade);
+            }
+
+            subscribeToMarketForAnalysis(market) {
+                const tickMessage = {
+                    ticks: market,
+                    subscribe: 1
+                };
+                
+                // Store subscription info
+                this.advancedMode.multiMarket.subscriptions.set(market, {
+                    subscribed: true,
+                    priceHistory: [],
+                    lastAnalysis: null
+                });
+                
+                this.sendMessage(tickMessage);
+                this.log(`Subscribed to ${market} for analysis`, 'info');
+            }
+
+            multiMarketAnalysisLoop(autoTrade) {
+                // Check if analysis was stopped
+                if (!this.advancedMode.multiMarket.scanning || !this.isRunning) return;
+                
+                const markets = Array.from(this.advancedMode.multiMarket.subscriptions.keys());
+                let completedAnalysis = 0;
+                let totalMarkets = markets.length;
+                
+                markets.forEach(market => {
+                    const marketData = this.advancedMode.multiMarket.subscriptions.get(market);
+                    
+                    if (marketData && marketData.priceHistory.length >= 50) {
+                        const analysis = this.analyzeMarketTrend(market, marketData.priceHistory);
+                        marketData.lastAnalysis = analysis;
+                        
+                        // Store result
+                        this.advancedMode.multiMarket.results.push({
+                            market: market,
+                            analysis: analysis,
+                            timestamp: Date.now()
+                        });
+                        
+                        completedAnalysis++;
+                    }
+                });
+                
+                // Update progress
+                const progress = (completedAnalysis / totalMarkets) * 100;
+                document.getElementById('scanningProgress').style.width = progress + '%';
+                
+                // Update UI with results
+                this.updateMultiMarketUI();
+                
+                // Find best opportunities
+                if (completedAnalysis > 0) {
+                    this.findBestOpportunities(autoTrade);
+                }
+                
+                // Continue scanning if still running
+                if (this.isRunning && this.advancedMode.multiMarket.scanning) {
+                    setTimeout(() => this.multiMarketAnalysisLoop(autoTrade), 2000);
+                }
+            }
+
+            analyzeMarketTrend(market, priceHistory) {
+                const prices = [...priceHistory].reverse();
+                const indicators = this.calculateTechnicalIndicators(prices);
+                const trendAnalysis = this.analyzeTrend(indicators, prices);
+                
+                return {
+                    ...trendAnalysis,
+                    market: market,
+                    indicators: indicators
+                };
+            }
+
+            updateMultiMarketUI() {
+                const container = document.getElementById('multiMarketResults');
+                container.innerHTML = '';
+                
+                this.advancedMode.multiMarket.results
+                    .sort((a, b) => Math.abs(b.analysis.score) - Math.abs(a.analysis.score))
+                    .slice(0, 10)
+                    .forEach(result => {
+                        const entry = document.createElement('div');
+                        entry.className = 'tick-entry';
+                        
+                        const directionColor = result.analysis.direction === 'UPTREND' ? '#4caf50' : 
+                                             result.analysis.direction === 'DOWNTREND' ? '#f44336' : '#ff9800';
+                        
+                        entry.innerHTML = `
+                            <span>${result.market}</span>
+                            <span style="color: ${directionColor};">
+                                ${result.analysis.direction} (${(result.analysis.confidence * 100).toFixed(0)}%)
+                            </span>
+                        `;
+                        container.appendChild(entry);
+                    });
+            }
+
+            findBestOpportunities(autoTrade) {
+                const results = this.advancedMode.multiMarket.results;
+                
+                // Find strongest uptrend
+                const uptrends = results.filter(r => r.analysis.direction === 'UPTREND');
+                const bestUptrend = uptrends.reduce((best, current) => 
+                    !best || current.analysis.score > best.analysis.score ? current : best, null);
+                
+                // Find strongest downtrend
+                const downtrends = results.filter(r => r.analysis.direction === 'DOWNTREND');
+                const bestDowntrend = downtrends.reduce((best, current) => 
+                    !best || current.analysis.score < best.analysis.score ? current : best, null);
+                
+                // Find highest confidence
+                const highestConfidence = results.reduce((best, current) => 
+                    !best || current.analysis.confidence > best.analysis.confidence ? current : best, null);
+                
+                // Update UI
+                document.getElementById('bestUptrend').textContent = bestUptrend ? 
+                    `${bestUptrend.market} (${bestUptrend.analysis.score.toFixed(2)})` : '--';
+                document.getElementById('bestDowntrend').textContent = bestDowntrend ? 
+                    `${bestDowntrend.market} (${bestDowntrend.analysis.score.toFixed(2)})` : '--';
+                document.getElementById('highestConfidence').textContent = highestConfidence ? 
+                    `${highestConfidence.market} (${(highestConfidence.analysis.confidence * 100).toFixed(0)}%)` : '--';
+                
+                // Execute trade on best opportunity if auto-trading and still running
+                if (autoTrade && highestConfidence && this.isRunning && this.advancedMode.autoTrade) {
+                    const threshold = parseFloat(document.getElementById('trendThreshold').value) || 0.6;
+                    
+                    if (Math.abs(highestConfidence.analysis.score) >= threshold && 
+                        highestConfidence.analysis.confidence >= 0.7) {
+                        
+                        // Don't trade if already in a trade
+                        if (this.activeContracts.size > 0) {
+                            this.log('⏳ Trade already active - waiting for completion', 'warning');
+                            return;
+                        }
+                        
+                        // Don't trade too frequently (minimum 10 seconds between trades)
+                        const timeSinceLastTrade = Date.now() - (this.lastTradeTime || 0);
+                        if (timeSinceLastTrade < 10000) {
+                            return;
+                        }
+                        
+                        // Switch to the best market and execute trade
+                        document.getElementById('hlMarketSelect').value = highestConfidence.market;
+                        this.log(`🎯 Best opportunity found: ${highestConfidence.market} - ${highestConfidence.analysis.direction}`, 'success');
+                        this.log(`Confidence: ${(highestConfidence.analysis.confidence * 100).toFixed(1)}% | Score: ${highestConfidence.analysis.score.toFixed(3)}`, 'info');
+                        
+                        // Execute trade
+                        this.executeAITrade(highestConfidence.analysis);
+                    }
+                }
+            }
+
+            stopMultiMarketScanning() {
+                this.advancedMode.multiMarket.scanning = false;
+                
+                // Unsubscribe from all markets except the main one
+                const currentMarket = this.getCurrentMarket();
+                this.advancedMode.multiMarket.subscriptions.forEach((data, market) => {
+                    if (market !== currentMarket) {
+                        // Note: In a real implementation, you'd send unsubscribe messages
+                        // For demo purposes, we just clear the data
+                    }
+                });
+                
+                this.advancedMode.multiMarket.subscriptions.clear();
+                this.log('Multi-market scanning stopped', 'info');
+            }
+
+            performTrendAnalysis() {
+                if (!this.advancedMode.analyzing || this.advancedMode.priceHistory.length < 50) {
+                    return;
+                }
+                
+                const prices = [...this.advancedMode.priceHistory].reverse(); // Oldest to newest
+                const analysisDepth = Math.min(prices.length, parseInt(document.getElementById('analysisDepth').value) || 200);
+                const recentPrices = prices.slice(-analysisDepth);
+                
+                // Update analysis progress
+                const progress = Math.min(100, (recentPrices.length / analysisDepth) * 100);
+                document.getElementById('analysisProgress').style.width = progress + '%';
+                
+                // Calculate technical indicators
+                const indicators = this.calculateTechnicalIndicators(recentPrices);
+                this.advancedMode.indicators = indicators;
+                
+                // Determine trend direction and confidence
+                const trendAnalysis = this.analyzeTrend(indicators, recentPrices);
+                this.advancedMode.trendData = trendAnalysis;
+                
+                // Update UI
+                this.updateTrendAnalysisUI(trendAnalysis, indicators);
+                
+                // Execute trade if in auto-trade mode and conditions are met
+                if (this.advancedMode.autoTrade && this.shouldExecuteTrade(trendAnalysis)) {
+                    this.executeAITrade(trendAnalysis);
+                }
+            }
+
+            calculateTechnicalIndicators(prices) {
+                const indicators = {};
+                
+                // EMA calculations
+                indicators.ema50 = this.calculateEMA(prices, 50);
+                indicators.ema200 = this.calculateEMA(prices, 200);
+                
+                // RSI calculation
+                indicators.rsi14 = this.calculateRSI(prices, 14);
+                
+                // Linear regression slope
+                indicators.linearSlope = this.calculateLinearSlope(prices);
+                
+                // Volatility (standard deviation)
+                indicators.volatility = this.calculateVolatility(prices, 20);
+                
+                return indicators;
+            }
+
+            calculateEMA(prices, period) {
+                if (prices.length < period) return null;
+                
+                const k = 2 / (period + 1);
+                let ema = prices[0];
+                
+                for (let i = 1; i < prices.length; i++) {
+                    ema = prices[i] * k + ema * (1 - k);
+                }
+                
+                return ema;
+            }
+
+            calculateRSI(prices, period = 14) {
+                if (prices.length < period + 1) return null;
+                
+                let gains = 0;
+                let losses = 0;
+                
+                // Calculate initial average gain and loss
+                for (let i = 1; i <= period; i++) {
+                    const change = prices[i] - prices[i - 1];
+                    if (change > 0) {
+                        gains += change;
+                    } else {
+                        losses -= change;
+                    }
+                }
+                
+                let avgGain = gains / period;
+                let avgLoss = losses / period;
+                
+                // Calculate RSI for remaining periods
+                for (let i = period + 1; i < prices.length; i++) {
+                    const change = prices[i] - prices[i - 1];
+                    const gain = change > 0 ? change : 0;
+                    const loss = change < 0 ? -change : 0;
+                    
+                    avgGain = (avgGain * (period - 1) + gain) / period;
+                    avgLoss = (avgLoss * (period - 1) + loss) / period;
+                }
+                
+                if (avgLoss === 0) return 100;
+                const rs = avgGain / avgLoss;
+                return 100 - (100 / (1 + rs));
+            }
+
+            calculateLinearSlope(prices) {
+                const n = prices.length;
+                if (n < 2) return 0;
+                
+                let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+                
+                for (let i = 0; i < n; i++) {
+                    sumX += i;
+                    sumY += prices[i];
+                    sumXY += i * prices[i];
+                    sumXX += i * i;
+                }
+                
+                const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+                return slope;
+            }
+
+            calculateVolatility(prices, period = 20) {
+                if (prices.length < period) return null;
+                
+                const recentPrices = prices.slice(-period);
+                const mean = recentPrices.reduce((sum, price) => sum + price, 0) / period;
+                const variance = recentPrices.reduce((sum, price) => sum + Math.pow(price - mean, 2), 0) / period;
+                
+                return Math.sqrt(variance);
+            }
+
+            analyzeTrend(indicators, prices) {
+                let trendScore = 0;
+                let confidence = 0;
+                let signals = [];
+                
+                // EMA Crossover Signal (Weight: 0.3)
+                if (indicators.ema50 && indicators.ema200) {
+                    if (indicators.ema50 > indicators.ema200) {
+                        trendScore += 0.3;
+                        signals.push('EMA Bullish');
+                    } else {
+                        trendScore -= 0.3;
+                        signals.push('EMA Bearish');
+                    }
+                    confidence += 0.25;
+                }
+                
+                // Linear Slope Signal (Weight: 0.25)
+                if (indicators.linearSlope > 0.001) {
+                    trendScore += 0.25;
+                    signals.push('Positive Slope');
+                } else if (indicators.linearSlope < -0.001) {
+                    trendScore -= 0.25;
+                    signals.push('Negative Slope');
+                }
+                confidence += 0.25;
+                
+                // RSI Momentum Signal (Weight: 0.2)
+                if (indicators.rsi14) {
+                    if (indicators.rsi14 > 55) {
+                        trendScore += 0.2;
+                        signals.push('RSI Bullish');
+                    } else if (indicators.rsi14 < 45) {
+                        trendScore -= 0.2;
+                        signals.push('RSI Bearish');
+                    }
+                    confidence += 0.25;
+                }
+                
+                // Price Action Signal (Weight: 0.25)
+                const recentPrices = prices.slice(-10);
+                const priceChange = (recentPrices[recentPrices.length - 1] - recentPrices[0]) / recentPrices[0];
+                if (priceChange > 0.001) {
+                    trendScore += 0.25;
+                    signals.push('Price Rising');
+                } else if (priceChange < -0.001) {
+                    trendScore -= 0.25;
+                    signals.push('Price Falling');
+                }
+                confidence += 0.25;
+                
+                // Determine trend direction
+                let direction = 'RANGING';
+                let strength = 'WEAK';
+                
+                if (trendScore > 0.3) {
+                    direction = 'UPTREND';
+                    strength = trendScore > 0.6 ? 'STRONG' : 'MODERATE';
+                } else if (trendScore < -0.3) {
+                    direction = 'DOWNTREND';
+                    strength = trendScore < -0.6 ? 'STRONG' : 'MODERATE';
+                }
+                
+                return {
+                    direction,
+                    strength,
+                    score: trendScore,
+                    confidence: Math.min(confidence, 1.0),
+                    signals,
+                    timestamp: Date.now()
+                };
+            }
+
+            shouldExecuteTrade(trendAnalysis) {
+                // Don't trade if analysis was stopped
+                if (!this.isRunning || !this.advancedMode.autoTrade) {
+                    return false;
+                }
+                
+                const threshold = parseFloat(document.getElementById('trendThreshold').value) || 0.6;
+                const isStrongTrend = Math.abs(trendAnalysis.score) >= threshold;
+                const hasHighConfidence = trendAnalysis.confidence >= 0.6; // Lowered from 0.7 to 0.6
+                
+                // Don't trade if already in a trade
+                if (this.activeContracts.size > 0) {
+                    return false;
+                }
+                
+                // Reduced minimum time between trades to 8 seconds for more frequent trading
+                const timeSinceLastAnalysis = Date.now() - (this.lastTradeTime || 0);
+                if (timeSinceLastAnalysis < 8000) {
+                    return false;
+                }
+                
+                if (isStrongTrend && hasHighConfidence) {
+                    this.log(`✅ AI Trade conditions met - Trend: ${trendAnalysis.direction}, Score: ${trendAnalysis.score.toFixed(3)}, Confidence: ${(trendAnalysis.confidence * 100).toFixed(1)}%`, 'success');
+                    return true;
+                }
+                
+                return false;
+            }
+
+            executeAITrade(trendAnalysis) {
+                this.lastTradeTime = Date.now();
+                
+                this.log(`🤖 AI TRADE SIGNAL: ${trendAnalysis.direction} (Score: ${trendAnalysis.score.toFixed(3)})`, 'success');
+                this.log(`Confidence: ${(trendAnalysis.confidence * 100).toFixed(1)}% | Signals: ${trendAnalysis.signals.join(', ')}`, 'info');
+                
+                // AI trades ALWAYS use hedge mode when in analyze & trade mode
+                this.log('🔄 AI Trading Mode: Executing HEDGE strategy (HIGHER + LOWER)', 'info');
+                this.placeAIHedgeTrade(trendAnalysis);
+            }
+
+            placeAIHedgeTrade(trendAnalysis) {
+                if (!this.isConnected) {
+                    this.log('Not connected to API', 'error');
+                    return;
+                }
+                
+                // Use regular stake for AI hedge trades
+                const stake = parseFloat(document.getElementById('hlStake').value);
+                const duration = parseInt(document.getElementById('hlDuration').value);
+                const market = this.getCurrentMarket();
+                
+                // Use hedge mode barrier settings
+                const higherBarrierOffset = parseFloat(document.getElementById('hedgeHigherBarrier').value);
+                const lowerBarrierOffset = parseFloat(document.getElementById('hedgeLowerBarrier').value);
+                const higherBarrierType = document.getElementById('hedgeHigherBarrierType').value;
+                const lowerBarrierType = document.getElementById('hedgeLowerBarrierType').value;
+                
+                if (stake * 2 > this.balance) {
+                    this.log('Insufficient balance for AI hedge trade', 'error');
+                    return;
+                }
+                
+                this.log(`🎯 Executing AI HEDGE Trade - HIGHER + LOWER ($${stake} each, ${duration} ticks)`, 'info');
+                
+                // Clear any pending proposals
+                this.pendingProposal = null;
+                this.hedgeProposals = [];
+                
+                const baseReqId = Date.now();
+                
+                // Use selected barrier types (+ or -)
+                const higherBarrier = `${higherBarrierType}${higherBarrierOffset}`;
+                const lowerBarrier = `${lowerBarrierType}${lowerBarrierOffset}`;
+                
+                // Create HIGHER proposal
+                const higherProposal = {
+                    proposal: 1,
+                    amount: stake,
+                    basis: 'stake',
+                    contract_type: 'CALL',
+                    currency: 'USD',
+                    symbol: market,
+                    duration: duration,
+                    duration_unit: 't',
+                    barrier: higherBarrier,
+                    req_id: baseReqId
+                };
+                
+                // Create LOWER proposal  
+                const lowerProposal = {
+                    proposal: 1,
+                    amount: stake,
+                    basis: 'stake',
+                    contract_type: 'PUT',
+                    currency: 'USD',
+                    symbol: market,
+                    duration: duration,
+                    duration_unit: 't',
+                    barrier: lowerBarrier,
+                    req_id: baseReqId + 1
+                };
+                
+                // Mark as AI hedge mode
+                this.pendingProposal = { 
+                    req_id: baseReqId, 
+                    isHedge: true,
+                    isAITrade: true,
+                    expectedProposals: 2,
+                    higherReqId: baseReqId,
+                    lowerReqId: baseReqId + 1
+                };
+                
+                // Send both proposals SIMULTANEOUSLY
+                this.sendMessage(higherProposal);
+                this.sendMessage(lowerProposal);
+                
+                this.log(`AI Hedge proposals sent: HIGHER (${higherBarrier}) & LOWER (${lowerBarrier}) - $${stake} each`, 'info');
+            }
+
+            checkForAdditionalTrades() {
+                if (!this.isRunning || !this.advancedMode.autoTrade || this.activeContracts.size > 0) {
+                    return;
+                }
+
+                const currentTrend = this.advancedMode.trendData;
+                if (!currentTrend) return;
+
+                const threshold = parseFloat(document.getElementById('trendThreshold').value) || 0.6;
+                const timeSinceLastTrade = Date.now() - (this.lastTradeTime || 0);
+                
+                // Check for strong bullish or bearish signals
+                const isStrongBullish = currentTrend.direction === 'UPTREND' && 
+                                       Math.abs(currentTrend.score) >= threshold && 
+                                       currentTrend.confidence >= 0.7;
+                                       
+                const isStrongBearish = currentTrend.direction === 'DOWNTREND' && 
+                                       Math.abs(currentTrend.score) >= threshold && 
+                                       currentTrend.confidence >= 0.7;
+
+                // Only trade if we have a strong signal and enough time has passed
+                if ((isStrongBullish || isStrongBearish) && timeSinceLastTrade >= 5000) {
+                    this.log(`🔄 Additional ${currentTrend.direction} signal detected - Executing hedge trade...`, 'info');
+                    this.executeAITrade(currentTrend);
+                }
+            }
+
+            updateTrendAnalysisUI(trendAnalysis, indicators) {
+                // Update trend direction with color coding
+                const directionElement = document.getElementById('trendDirection');
+                directionElement.textContent = trendAnalysis.direction;
+                directionElement.className = 'info-value';
+                
+                if (trendAnalysis.direction === 'UPTREND') {
+                    directionElement.style.color = '#4caf50';
+                } else if (trendAnalysis.direction === 'DOWNTREND') {
+                    directionElement.style.color = '#f44336';
+                } else {
+                    directionElement.style.color = '#ff9800';
+                }
+                
+                // Update confidence score
+                const confidenceElement = document.getElementById('trendConfidence');
+                confidenceElement.textContent = (trendAnalysis.confidence * 100).toFixed(1) + '%';
+                confidenceElement.style.color = trendAnalysis.confidence > 0.7 ? '#4caf50' : '#ff9800';
+                
+                // Update trend strength
+                const strengthElement = document.getElementById('trendStrength');
+                strengthElement.textContent = trendAnalysis.strength;
+                strengthElement.style.color = trendAnalysis.strength === 'STRONG' ? '#4caf50' : 
+                                            trendAnalysis.strength === 'MODERATE' ? '#ff9800' : '#f44336';
+                
+                // Update technical indicators
+                document.getElementById('ema50').textContent = indicators.ema50 ? indicators.ema50.toFixed(4) : '--';
+                document.getElementById('ema200').textContent = indicators.ema200 ? indicators.ema200.toFixed(4) : '--';
+                document.getElementById('rsi14').textContent = indicators.rsi14 ? indicators.rsi14.toFixed(1) : '--';
+                document.getElementById('linearSlope').textContent = indicators.linearSlope ? indicators.linearSlope.toFixed(6) : '--';
+                document.getElementById('volatility').textContent = indicators.volatility ? indicators.volatility.toFixed(4) : '--';
+            }
+
+            clearStats() {
+                this.stats = {
+                    totalTrades: 0,
+                    wins: 0,
+                    losses: 0,
+                    runningPL: 0,
+                    maxDrawdown: 0,
+                    startingBalance: this.balance
+                };
+                this.martingaleStep = 0;
+                this.currentStake = 0;
+                this.isFirstTrade = true; // Reset first trade flag when clearing stats
+                this.updateUI();
+                this.log('Statistics cleared', 'info');
+            }
+
+            updateConnectionStatus() {
+                const statusElements = [
+                    document.getElementById('hlHeaderConnectionStatus')
+                ];
+                
+                statusElements.forEach(element => {
+                    if (this.isConnected) {
+                        element.textContent = 'Connected';
+                        element.className = 'status connected';
+                    } else {
+                        element.textContent = 'Disconnected';
+                        element.className = 'status disconnected';
+                    }
+                });
+                
+                this.updateControlButtons();
+            }
+
+            updateControlButtons() {
+                const runBtn = document.getElementById('hlRunBtn');
+                const stopBtn = document.getElementById('hlStopBtn');
+                const placeTradeBtn = document.getElementById('hlPlaceTradeBtn');
+                
+                runBtn.disabled = !this.isConnected || this.isRunning;
+                stopBtn.disabled = !this.isRunning;
+                placeTradeBtn.disabled = !this.isConnected || this.isRunning;
+            }
+
+            updateUI() {
+                // Update balance displays
+                document.getElementById('hlHeaderBalance').textContent = `$${this.balance.toFixed(2)}`;
+                document.getElementById('hlBalance').textContent = `$${this.balance.toFixed(2)}`;
+                
+                // Update current tick
+                document.getElementById('hlCurrentTick').textContent = this.currentTick.toFixed(3);
+                document.getElementById('hlTickTime').textContent = new Date().toLocaleTimeString();
+                
+                // Update statistics
+                document.getElementById('hlTotalTrades').textContent = this.stats.totalTrades;
+                document.getElementById('hlWins').textContent = this.stats.wins;
+                document.getElementById('hlLosses').textContent = this.stats.losses;
+                
+                const winRate = this.stats.totalTrades > 0 ? (this.stats.wins / this.stats.totalTrades * 100) : 0;
+                document.getElementById('hlWinRate').textContent = winRate.toFixed(1) + '%';
+                
+                const plElement = document.getElementById('hlRunningPL');
+                plElement.textContent = `$${this.stats.runningPL.toFixed(2)}`;
+                plElement.className = this.stats.runningPL >= 0 ? 'stat-value positive' : 'stat-value negative';
+                
+                document.getElementById('hlMaxDrawdown').textContent = `$${this.stats.maxDrawdown.toFixed(2)}`;
+                
+                // Update recent ticks
+                this.updateRecentTicks();
+            }
+
+            updateRecentTicks() {
+                const container = document.getElementById('hlRecentTicks');
+                if (this.tickHistory.length === 0) return;
+                
+                container.innerHTML = '';
+                this.tickHistory.slice(0, 10).forEach(tick => {
+                    const entry = document.createElement('div');
+                    entry.className = 'tick-entry';
+                    entry.innerHTML = `
+                        <span>${tick.time.toLocaleTimeString()}</span>
+                        <span>${tick.price.toFixed(3)}</span>
+                    `;
+                    container.appendChild(entry);
+                });
+            }
+
+            log(message, type = 'info') {
+                const container = document.getElementById('hlLogContainer');
+                const entry = document.createElement('div');
+                entry.className = `log-entry log-${type}`;
+                
+                const timestamp = new Date().toLocaleTimeString();
+                entry.innerHTML = `<span>[${timestamp}]</span> ${message}`;
+                
+                container.insertBefore(entry, container.firstChild);
+                
+                // Keep only last 100 entries
+                while (container.children.length > 100) {
+                    container.removeChild(container.lastChild);
+                }
+            }
+
+            clearLog() {
+                document.getElementById('hlLogContainer').innerHTML = '';
+                this.log('Log cleared', 'info');
+            }
+
+            exportLog() {
+                const container = document.getElementById('hlLogContainer');
+                const entries = Array.from(container.children).map(entry => entry.textContent);
+                const logText = entries.reverse().join('\n');
+                
+                const blob = new Blob([logText], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `hedger-log-${new Date().toISOString().slice(0, 10)}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                this.log('Log exported successfully', 'success');
+            }
+
+            toggleMenu() {
+                const dropdown = document.getElementById('menuDropdown');
+                dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+            }
+
+            openAdvancedHedgerTool() {
+                // Close the menu
+                document.getElementById('menuDropdown').style.display = 'none';
+                
+                this.log('Opening Advanced Hedger Tool...', 'info');
+                
+                // Hide current interface and main header
+                document.querySelector('.container').style.display = 'none';
+                document.querySelector('.header').style.display = 'none';
+                
+                // Create and show Advanced Hedger Tool interface
+                this.createAdvancedHedgerInterface();
+            }
+
+            createAdvancedHedgerInterface() {
+                // Remove existing advanced hedger interface if it exists
+                const existingInterface = document.getElementById('advancedHedgerStrategy');
+                if (existingInterface) {
+                    existingInterface.remove();
+                }
+
+                // Create the advanced hedger interface
+                const advancedInterface = document.createElement('div');
+                advancedInterface.id = 'advancedHedgerStrategy';
+                advancedInterface.className = 'container';
+
+                advancedInterface.innerHTML = `
+                    <!-- Header with Back Button -->
+                    <div class="panel" style="grid-column: 1 / -1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3 style="margin: 0;">🔧 Advanced Hedger Tool</h3>
+                            <button class="btn btn-secondary" id="backToMainBtn">← Back to Main</button>
+                        </div>
+                        <p style="color: #b0b0b0; margin: 0;">Professional hedging strategy with advanced risk management</p>
+                    </div>
+
+                    <!-- Connection Panel -->
+                    <div class="panel">
+                        <h3>🔗 Connection</h3>
+                        <div style="margin-bottom: 15px;">
+                            <label for="apiToken" style="display: block; margin-bottom: 5px; color: #b0b0b0;">Deriv API Token</label>
+                            <input type="password" class="form-control" id="apiToken" placeholder="Enter your API token">
+                            <small style="color: #b0b0b0; font-size: 0.8rem; margin-top: 5px; display: block;">
+                                Get your token from <a href="https://app.deriv.com/account/api-token" target="_blank" rel="noopener noreferrer" style="color: #4fc3f7;">app.deriv.com/account/api-token</a>
+                            </small>
+                        </div>
+                        <button class="btn btn-primary" id="connectBtn">Connect</button>
+                        <div style="margin-top: 15px;">
+                            <span class="status-indicator status-disconnected" id="connectionIndicator"></span>
+                            <span id="connectionStatus">Disconnected</span>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <strong>Balance: $<span id="balance">0.00</span></strong>
+                        </div>
+                    </div>
+
+                    <!-- Market Panel -->
+                    <div class="panel">
+                        <h3>📊 Market Settings</h3>
+                        <div style="margin-bottom: 15px;">
+                            <label for="marketSelect" style="display: block; margin-bottom: 5px; color: #b0b0b0;">Market</label>
+                            <select class="form-control" id="marketSelect">
+                                <option value="1HZ10V">Volatility 10 (1s)</option>
+                                <option value="1HZ15V">Volatility 15 (1s)</option>
+                                <option value="1HZ25V">Volatility 25 (1s)</option>
+                                <option value="1HZ30V">Volatility 30 (1s)</option>
+                                <option value="1HZ50V">Volatility 50 (1s)</option>
+                                <option value="1HZ75V">Volatility 75 (1s)</option>
+                                <option value="1HZ90V">Volatility 90 (1s)</option>
+                                <option value="1HZ100V">Volatility 100 (1s)</option>
+                                <option value="R_10">Volatility 10</option>
+                                <option value="R_25">Volatility 25</option>
+                                <option value="R_50">Volatility 50</option>
+                                <option value="R_75">Volatility 75</option>
+                                <option value="R_100">Volatility 100</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Market Info -->
+                    <div class="panel" style="grid-column: 1 / -1;">
+                        <h3>📈 Market Information</h3>
+                        <div class="market-info">
+                            <div class="info-item">
+                                <div class="info-value" id="currentPrice">0.00000</div>
+                                <div>Current Price</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-value" id="lastDigit">0</div>
+                                <div>Last Digit</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-value" id="currentMarket">1HZ10V</div>
+                                <div>Active Market</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-value" id="tickTime">--:--:--</div>
+                                <div>Last Update</div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <strong>Status:</strong>
+                                <span id="systemStatus" style="color: #4fc3f7;">Ready</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <strong>Recent Digits:</strong>
+                                <span id="digitHistory" style="font-family: 'Courier New', monospace; color: #4fc3f7;">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Trade Parameters -->
+                    <div class="panel">
+                        <h3>💹 Trade Parameters</h3>
+                        <div style="margin-bottom: 15px;">
+                            <label for="stake" style="display: block; margin-bottom: 5px; color: #b0b0b0;">Initial Stake ($)</label>
+                            <input type="number" class="form-control" id="stake" value="1" min="0.35" step="0.01">
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label for="hedgeStake" style="display: block; margin-bottom: 5px; color: #b0b0b0;">Hedge Stake ($)</label>
+                            <input type="number" class="form-control" id="hedgeStake" value="6" min="0.35" step="0.01">
+                            <small style="color: #b0b0b0; font-size: 0.8rem; margin-top: 5px; display: block;">
+                                Amount per hedge contract
+                            </small>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; color: #b0b0b0;">Total Hedge Cost</label>
+                            <div style="background: rgba(79, 195, 247, 0.1); border: 1px solid rgba(79, 195, 247, 0.3); border-radius: 8px; padding: 10px; color: #4fc3f7; font-weight: bold; font-size: 1.1rem;">
+                                $<span id="totalHedgeCost">12.00</span>
+                            </div>
+                            <small style="color: #b0b0b0; font-size: 0.8rem; margin-top: 5px; display: block;">
+                                Hedge stake × 2 contracts
+                            </small>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label for="takeProfit" style="display: block; margin-bottom: 5px; color: #b0b0b0;">Take Profit ($)</label>
+                            <input type="number" class="form-control" id="takeProfit" value="100" min="1" step="0.01">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label for="stopLoss" style="display: block; margin-bottom: 5px; color: #b0b0b0;">Stop Loss ($)</label>
+                            <input type="number" class="form-control" id="stopLoss" value="50" min="1" step="0.01">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label for="martingaleMultiplier" style="display: block; margin-bottom: 5px; color: #b0b0b0;">Martingale Multiplier</label>
+                            <input type="number" class="form-control" id="martingaleMultiplier" value="2" min="1" step="0.1">
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label for="tradeDuration" style="display: block; margin-bottom: 5px; color: #b0b0b0;">Trade Duration (ticks)</label>
+                            <input type="number" class="form-control" id="tradeDuration" value="1" min="1" max="10">
+                            <small style="color: #b0b0b0; font-size: 0.8rem; margin-top: 5px; display: block;">
+                                Number of ticks before contract expires (1 = next tick)
+                            </small>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="contractType">Contract Type</label>
+                                <select class="form-control" id="contractType">
+                                    <option value="EVEN">EVEN</option>
+                                    <option value="ODD">ODD</option>
+                                    <option value="OVER">OVER</option>
+                                    <option value="UNDER">UNDER</option>
+                                    <option value="DIFFERS">DIFFERS</option>
+                                    <option value="RISE">RISE</option>
+                                    <option value="FALL">FALL</option>
+                                    <option value="ACCUMULATOR">ACCUMULATOR</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="predictionDigit">Prediction Digit</label>
+                                <input type="number" class="form-control" id="predictionDigit" value="5" min="0" max="9">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <span style="margin-right: 10px;">Entry Point Mode</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="entryPointMode">
+                                    <span class="slider"></span>
+                                </label>
+                            </label>
+                            <span id="entryPointModeText">OFF</span>
+                        </div>
+
+                        <div id="entryPointPanel" style="display:none; margin-top: 15px; padding: 15px; background: rgba(255, 152, 0, 0.1); border-radius: 8px; border: 1px solid rgba(255, 152, 0, 0.3);">
+                            <div class="form-group">
+                                <label for="entryPoint">Entry Point Digit</label>
+                                <input type="number" class="form-control" id="entryPoint" value="1" min="0" max="9">
+                                <small style="color: #b0b0b0; font-size: 0.8rem; margin-top: 5px; display: block;">
+                                    Contract A will ALWAYS wait for this digit to appear before executing
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Hedge Mode</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="hedgeMode">
+                                <span class="slider"></span>
+                            </label>
+                            <span id="hedgeModeText">OFF</span>
+                        </div>
+
+                        <div id="hedgePanel" style="display:none;">
+                            <div class="form-group">
+                                <label for="hedgeType">Hedge Type</label>
+                                <select class="form-control" id="hedgeType">
+                                    <option value="NORMAL">Normal</option>
+                                    <option value="TRIGGER">Trigger</option>
+                                </select>
+                            </div>
+                            <div id="triggerPanel" style="display:none;">
+                                <label style="color: #4fc3f7; font-weight: bold; margin-bottom: 15px; display: block;">🎯 Trigger Conditions</label>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 15px;">
+                                    <label class="trigger-card" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(76, 175, 80, 0.05)); border: 1px solid rgba(76, 175, 80, 0.3); border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 0.9rem; color: #ffffff;">
+                                        <input type="checkbox" class="trigger-option" value="4 or 5" style="accent-color: #4caf50; transform: scale(1.2);">
+                                        <span style="font-weight: 500;">🔄 4 or 5</span>
+                                    </label>
+                                    <label class="trigger-card" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: linear-gradient(135deg, rgba(33, 150, 243, 0.1), rgba(33, 150, 243, 0.05)); border: 1px solid rgba(33, 150, 243, 0.3); border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 0.9rem; color: #ffffff;">
+                                        <input type="checkbox" class="trigger-option" value="4,5" style="accent-color: #2196f3; transform: scale(1.2);">
+                                        <span style="font-weight: 500;">📈 4,5 sequence</span>
+                                    </label>
+                                    <label class="trigger-card" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: linear-gradient(135deg, rgba(156, 39, 176, 0.1), rgba(156, 39, 176, 0.05)); border: 1px solid rgba(156, 39, 176, 0.3); border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 0.9rem; color: #ffffff;">
+                                        <input type="checkbox" class="trigger-option" value="5,4" style="accent-color: #9c27b0; transform: scale(1.2);">
+                                        <span style="font-weight: 500;">📉 5,4 sequence</span>
+                                    </label>
+                                    <label class="trigger-card" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: linear-gradient(135deg, rgba(255, 152, 0, 0.1), rgba(255, 152, 0, 0.05)); border: 1px solid rgba(255, 152, 0, 0.3); border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 0.9rem; color: #ffffff;">
+                                        <input type="checkbox" class="trigger-option" value="4,4" style="accent-color: #ff9800; transform: scale(1.2);">
+                                        <span style="font-weight: 500;">🔁 4,4 sequence</span>
+                                    </label>
+                                    <label class="trigger-card" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: linear-gradient(135deg, rgba(244, 67, 54, 0.1), rgba(244, 67, 54, 0.05)); border: 1px solid rgba(244, 67, 54, 0.3); border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 0.9rem; color: #ffffff;">
+                                        <input type="checkbox" class="trigger-option" value="5,5" style="accent-color: #f44336; transform: scale(1.2);">
+                                        <span style="font-weight: 500;">🔄 5,5 sequence</span>
+                                    </label>
+                                    <label class="trigger-card" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: linear-gradient(135deg, rgba(79, 195, 247, 0.1), rgba(79, 195, 247, 0.05)); border: 1px solid rgba(79, 195, 247, 0.3); border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 0.9rem; color: #ffffff;">
+                                        <input type="checkbox" class="trigger-option" value="4" style="accent-color: #4fc3f7; transform: scale(1.2);">
+                                        <span style="font-weight: 500;">4️⃣ 4 only</span>
+                                    </label>
+                                    <label class="trigger-card" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: linear-gradient(135deg, rgba(103, 58, 183, 0.1), rgba(103, 58, 183, 0.05)); border: 1px solid rgba(103, 58, 183, 0.3); border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 0.9rem; color: #ffffff;">
+                                        <input type="checkbox" class="trigger-option" value="5" style="accent-color: #673ab7; transform: scale(1.2);">
+                                        <span style="font-weight: 500;">5️⃣ 5 only</span>
+                                    </label>
+                                </div>
+                                <small style="color: #b0b0b0; font-size: 0.8rem; margin-top: 10px; display: block;">
+                                    Select multiple trigger conditions. Sequences check last digit followed by second-to-last digit.
+                                </small>
+                            </div>
+                        </div>
+
+                        <div id="accumulatorPanel" style="display:none;">
+                            <h4>📈 Accumulator Settings</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="accumulatorTicks">Auto-Close After (ticks)</label>
+                                    <input type="number" class="form-control" id="accumulatorTicks" value="3" min="1" max="10">
+                                </div>
+                                <div class="form-group">
+                                    <label for="growthRate">Growth Rate</label>
+                                    <select class="form-control" id="growthRate">
+                                        <option value="0.01">1%</option>
+                                        <option value="0.02">2%</option>
+                                        <option value="0.03">3%</option>
+                                        <option value="0.04">4%</option>
+                                        <option value="0.05">5%</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Statistics -->
+                    <div class="panel">
+                        <h3>📊 Statistics</h3>
+                        <div class="stats-grid">
+                            <div class="stat-item"><div class="stat-value" id="totalWins">0</div><div>Wins</div></div>
+                            <div class="stat-item"><div class="stat-value" id="totalLosses">0</div><div>Losses</div></div>
+                            <div class="stat-item"><div class="stat-value" id="totalTrades">0</div><div>Total</div></div>
+                            <div class="stat-item"><div class="stat-value" id="winRate">0%</div><div>Win Rate</div></div>
+                        </div>
+                        <div style="text-align:center;">
+                            <h3>P/L: $<span id="totalPL" style="color:#4fc3f7;">0.00</span></h3>
+                        </div>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="panel" style="grid-column:1/-1;">
+                        <h3>🎮 Controls</h3>
+                        <button class="btn btn-success" id="runBtn">▶️ Run</button>
+                        <button class="btn btn-danger" id="stopBtn">⏹️ Stop</button>
+                        <button class="btn btn-secondary" id="clearLogBtn">🗑️ Clear Log</button>
+                        <button class="btn btn-secondary" id="clearStatsBtn">📊 Clear Stats</button>
+                    </div>
+
+                    <!-- Log Panel -->
+                    <div class="panel log-panel">
+                        <h3>📝 Advanced Hedger Log</h3>
+                        <div class="log-container" id="logContent"></div>
+                    </div>
+                `;
+
+                // Add to document
+                document.body.appendChild(advancedInterface);
+
+                // Initialize Advanced Hedger Tool functionality
+                this.initializeAdvancedHedger();
+            }
+
+            initializeAdvancedHedger() {
+                // Initialize the new AdvancedHedgerTool class
+                window.advancedHedgerTool = new AdvancedHedgerTool();
+
+                // Back button
+                document.getElementById('backToMainBtn').addEventListener('click', () => this.backToMain());
+
+                this.log('Advanced Hedger Tool initialized with new implementation', 'success');
+            }
+
+            backToMain() {
+                // Hide advanced interface
+                const advancedInterface = document.getElementById('advancedHedgerStrategy');
+                if (advancedInterface) {
+                    advancedInterface.style.display = 'none';
+                }
+
+                // Show main interface and header
+                document.querySelector('.container').style.display = 'block';
+                document.querySelector('.header').style.display = 'flex';
+
+                this.log('Returned to main interface', 'info');
+            }
+        }
+
+        // Advanced Hedger Tool Class
+        class AdvancedHedgerTool {
+            constructor() {
+                this.ws = null; this.isConnected = false; this.isRunning = false;
+                this.balance = 0; this.currentPrice = 0; this.lastDigit = 0;
+                this.totalPL = 0; this.currentStake = 1; this.isHedging = false;
+                this.stats = {wins:0, losses:0, totalTrades:0};
+                this.pendingContracts = new Map(); this.hedgeContracts = new Map();
+                this.accumulatorContracts = new Map(); this.currentHedgeId = null;
+                this.triggerDigits=[4,5];
+                this.markets=['1HZ10V','1HZ15V','1HZ25V','1HZ30V','1HZ50V','1HZ75V','1HZ90V','1HZ100V','R_10','R_25','R_50','R_75','R_100'];
+                this.digitHistory = []; // Track last few digits for sequence matching
+                this.waitingForEntry = false; // Track if waiting for entry point
+                this.waitingForHedgeTrigger = false; // Track if waiting for hedge trigger after loss
+                this.selectedTriggers = []; // Track selected trigger conditions
+                this.hedgeProposals = []; // Track hedge proposals
+                this.pendingHedgeProposals = 0; // Track expected hedge proposals
+                this.init();
+            }
+
+            init() {
+                ['connectBtn','runBtn','stopBtn','clearLogBtn','clearStatsBtn'].forEach(id=>{
+                    const btn = document.getElementById(id);
+                    if (btn) btn.onclick=()=>this[id.replace('Btn','')]?.();
+                });
+                
+                // === Hedge Section Logic ===
+                // When Hedge Mode toggle changes (ON/OFF)
+                const hedgeMode = document.getElementById('hedgeMode');
+                if (hedgeMode) {
+                    hedgeMode.onchange = () => {
+                        const on = hedgeMode.checked;
+                        const hedgeModeText = document.getElementById('hedgeModeText');
+                        const hedgePanel = document.getElementById('hedgePanel');
+                        if (hedgeModeText) hedgeModeText.textContent = on ? 'ON' : 'OFF';
+                        if (hedgePanel) hedgePanel.style.display = on ? 'block' : 'none';
+                    };
+                }
+
+                // When Hedge Type dropdown changes (Normal / Trigger)
+                const hedgeType = document.getElementById('hedgeType');
+                if (hedgeType) {
+                    hedgeType.onchange = () => {
+                        const value = hedgeType.value;
+                        const triggerPanel = document.getElementById('triggerPanel');
+                        if (triggerPanel) {
+                            triggerPanel.style.display = 
+                                value === 'Trigger Mode' || value === 'TRIGGER' ? 'block' : 'none';
+                        }
+                    };
+                }
+
+                // When Hedge Stake input changes, update total cost
+                const hedgeStake = document.getElementById('hedgeStake');
+                if (hedgeStake) {
+                    hedgeStake.oninput = () => this.updateHedgeCost();
+                }
+
+                // Contract type handler
+                const contractType = document.getElementById('contractType');
+                if (contractType) {
+                    contractType.onchange = () => {
+                        console.log('Selected Contract Type:', contractType.value);
+                        this.toggleAccumulator();
+                    };
+                }
+
+                // Prediction digit handler
+                const predictionDigit = document.getElementById('predictionDigit');
+                if (predictionDigit) {
+                    predictionDigit.oninput = () => {
+                        console.log('Prediction Digit set to:', predictionDigit.value);
+                    };
+                }
+
+                // Entry Point Mode toggle
+                const entryPointMode = document.getElementById('entryPointMode');
+                if (entryPointMode) {
+                    entryPointMode.onchange = () => {
+                        const on = entryPointMode.checked;
+                        const entryPointModeText = document.getElementById('entryPointModeText');
+                        const entryPointPanel = document.getElementById('entryPointPanel');
+                        if (entryPointModeText) entryPointModeText.textContent = on ? 'ON' : 'OFF';
+                        if (entryPointPanel) entryPointPanel.style.display = on ? 'block' : 'none';
+                    };
+                }
+
+                // Initialize default hedge cost display on load
+                const initStake = parseFloat(document.getElementById('hedgeStake')?.value) || 0;
+                const totalHedgeCost = document.getElementById('totalHedgeCost');
+                if (totalHedgeCost) totalHedgeCost.textContent = (initStake * 2).toFixed(2);
+                
+                this.updateUI();
+            }
+
+            log(msg,type='info'){
+                const c=document.getElementById('logContent');
+                if (!c) return;
+                const e=document.createElement('div');e.className=`log-entry log-${type}`;
+                e.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;
+                c.appendChild(e);c.scrollTop=c.scrollHeight;
+            }
+
+            connect(){
+                const token=document.getElementById('apiToken')?.value.trim();
+                if(!token)return this.log('Enter API token','error');
+                this.ws=new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089');
+                this.ws.onopen=()=>{this.send({authorize:token});this.log('Connecting...','info');};
+                this.ws.onmessage=e=>this.handle(JSON.parse(e.data));
+                this.ws.onclose=()=>{this.isConnected=false;this.updateUI();this.log('Disconnected','error');};
+            }
+
+            send(o){if(this.ws&&this.ws.readyState===1)this.ws.send(JSON.stringify(o));}
+
+            handle(d){
+                if(d.msg_type==='authorize'){if(d.error)return this.log('Auth fail','error');
+                    this.isConnected=true;this.balance=d.authorize.balance;
+                    const marketSelect = document.getElementById('marketSelect');
+                    if (marketSelect) this.send({ticks:marketSelect.value,subscribe:1});
+                    this.send({balance:1,subscribe:1});
+                    this.log('Authorized OK','success');this.updateUI();}
+                if(d.msg_type==='tick'){this.currentPrice=d.tick.quote;
+                    this.lastDigit=parseInt(d.tick.quote.toString().slice(-1));
+                    this.digitHistory.unshift(this.lastDigit);
+                    if(this.digitHistory.length > 10) this.digitHistory.pop(); // Keep last 10 digits
+                    this.updateUI();this.checkTrigger();this.checkEntryPoint();}
+                if(d.msg_type==='proposal')this.buy(d);
+                if(d.msg_type==='buy')this.registerBuy(d);
+                if(d.msg_type==='proposal_open_contract')this.updateContract(d);
+                if(d.msg_type==='balance'){this.balance=d.balance.balance;this.updateUI();}
+            }
+
+            toggleHedgeMode(){
+                const hedgeMode = document.getElementById('hedgeMode');
+                const hedgePanel = document.getElementById('hedgePanel');
+                const hedgeModeText = document.getElementById('hedgeModeText');
+                if (!hedgeMode || !hedgePanel || !hedgeModeText) return;
+                
+                const on=hedgeMode.checked;
+                hedgePanel.style.display=on?'block':'none';
+                hedgeModeText.textContent=on?'ON':'OFF';
+            }
+
+            toggleTriggerMode(){
+                const hedgeType = document.getElementById('hedgeType');
+                const triggerPanel = document.getElementById('triggerPanel');
+                if (!hedgeType || !triggerPanel) return;
+                
+                const v=hedgeType.value;
+                triggerPanel.style.display=v==='TRIGGER'?'block':'none';
+            }
+
+            toggleAccumulator(){
+                const contractType = document.getElementById('contractType');
+                const accumulatorPanel = document.getElementById('accumulatorPanel');
+                if (!contractType || !accumulatorPanel) return;
+                
+                const v=contractType.value;
+                accumulatorPanel.style.display=v==='ACCUMULATOR'?'block':'none';
+            }
+
+            updateHedgeCost(){
+                const hedgeStake = document.getElementById('hedgeStake');
+                const totalHedgeCost = document.getElementById('totalHedgeCost');
+                if (!hedgeStake || !totalHedgeCost) return;
+                
+                const s=parseFloat(hedgeStake.value)||0;
+                totalHedgeCost.textContent=(s*2).toFixed(2);
+            }
+
+            run(){
+                if(!this.isConnected)return this.log('Connect first','error');
+                this.isRunning=true;this.isHedging=false;
+                const stake = document.getElementById('stake');
+                if (stake) this.currentStake=parseFloat(stake.value);
+                
+                // Check if entry point mode is enabled
+                const entryPointMode = document.getElementById('entryPointMode');
+                if (entryPointMode && entryPointMode.checked) {
+                    this.waitingForEntry = true;
+                    this.log('Started - Waiting for entry point for EVERY trade...','success');
+                } else {
+                    this.waitingForEntry = false;
+                    this.log('Started','success');
+                    setTimeout(()=>this.tradeA(),800);
+                }
+                
+                this.updateUI();
+            }
+            
+            stop(){this.isRunning=false;this.log('Stopped','warning');this.updateUI();}
+
+            tradeA(){
+                if(!this.isRunning||this.isHedging)return;
+                const contractType = document.getElementById('contractType');
+                const marketSelect = document.getElementById('marketSelect');
+                const predictionDigit = document.getElementById('predictionDigit');
+                const tradeDuration = document.getElementById('tradeDuration');
+                if (!contractType || !marketSelect || !predictionDigit) return;
+                
+                const ct=contractType.value;
+                const symbol=marketSelect.value;
+                const pd=parseInt(predictionDigit.value);
+                const duration = tradeDuration ? parseInt(tradeDuration.value) : 1;
+                
+                let p={proposal:1,amount:this.currentStake,basis:'stake',symbol,currency:'USD',duration:duration,duration_unit:'t'};
+                if(ct==='EVEN')p.contract_type='DIGITEVEN';
+                if(ct==='ODD')p.contract_type='DIGITODD';
+                if(ct==='OVER'){p.contract_type='DIGITOVER';p.barrier=pd;}
+                if(ct==='UNDER'){p.contract_type='DIGITUNDER';p.barrier=pd;}
+                if(ct==='DIFFERS'){p.contract_type='DIGITDIFF';p.barrier=pd;}
+                if(ct==='RISE')p.contract_type='CALL';
+                if(ct==='FALL')p.contract_type='PUT';
+                if(ct==='ACCUMULATOR'){
+                    const growthRate = document.getElementById('growthRate');
+                    if (growthRate) {
+                        p.contract_type='ACCU';
+                        p.growth_rate=parseFloat(growthRate.value);
+                    }
+                }
+                this.send(p);this.log(`Placing ${ct} trade - $${this.currentStake} (${duration} tick${duration > 1 ? 's' : ''})`,'info');
+            }
+
+            buy(d){
+                if(d.error){
+                    this.log('Proposal error: '+d.error.message,'error');
+                    // If this was a hedge proposal that failed, reset hedge state
+                    if(d.echo_req && this.expectedHedgeReqIds && this.expectedHedgeReqIds.includes(d.echo_req.req_id)){
+                        this.isHedging = false;
+                        this.log('Hedge proposal failed - Resuming normal trading','warning');
+                        if(this.isRunning){
+                            const entryPointMode = document.getElementById('entryPointMode');
+                            if(entryPointMode && entryPointMode.checked){
+                                this.waitingForEntry = true;
+                                this.log('Waiting for entry point for next trade...','info');
+                            } else {
+                                setTimeout(()=>this.tradeA(),1000);
+                            }
+                        }
+                    }
+                    return;
+                }
+                
+                // Handle hedge proposals differently
+                if(d.echo_req && this.expectedHedgeReqIds && this.expectedHedgeReqIds.includes(d.echo_req.req_id)){
+                    // Store hedge proposal with exact stake validation
+                    const hedgeStake = document.getElementById('hedgeStake');
+                    const requestedStake = hedgeStake ? parseFloat(hedgeStake.value) : 1;
+                    
+                    // Determine contract type based on req_id position
+                    const contractType = d.echo_req.req_id === this.expectedHedgeReqIds[0] ? 'OVER_5' : 'UNDER_4';
+                    
+                    this.hedgeProposals.push({
+                        id: d.proposal.id,
+                        type: contractType,
+                        payout: d.proposal.payout,
+                        requestedStake: requestedStake,
+                        req_id: d.echo_req.req_id
+                    });
+                    
+                    this.log(`Hedge proposal received: ${contractType} - Using exact stake: $${requestedStake}`, 'info');
+                    
+                    // If we have both hedge proposals, buy them immediately
+                    if(this.hedgeProposals.length === 2){
+                        this.log('Both hedge proposals received - Executing purchases...','success');
+                        
+                        // Buy both hedge contracts with EXACT requested stakes
+                        this.hedgeProposals.forEach(proposal => {
+                            this.send({buy:proposal.id,price:proposal.requestedStake});
+                            this.log(`Purchasing ${proposal.type}: $${proposal.requestedStake}`,'info');
+                        });
+                        
+                        // Clear hedge proposals and expected req_ids
+                        this.hedgeProposals = [];
+                        this.expectedHedgeReqIds = null;
+                    }
+                } else {
+                    // Regular contract A proposal - use exact stake
+                    this.send({buy:d.proposal.id,price:this.currentStake});
+                    this.log(`Purchasing Contract A: $${this.currentStake}`,'info');
+                }
+            }
+
+            registerBuy(d){
+                if(d.error)return this.log('Buy error: '+d.error.message,'error');
+                
+                // Determine if this is a hedge contract or main contract
+                const contractType = this.isHedging ? 'hedge' : 'main';
+                this.pendingContracts.set(d.buy.contract_id,{cost:d.buy.buy_price,type:contractType});
+                this.send({proposal_open_contract:1,contract_id:d.buy.contract_id,subscribe:1});
+                
+                if(contractType === 'hedge'){
+                    this.log(`Hedge contract bought: ${d.buy.contract_id} - $${d.buy.buy_price}`,'success');
+                } else {
+                    this.log(`Contract A bought: ${d.buy.contract_id} - $${d.buy.buy_price}`,'success');
+                }
+            }
+
+            updateContract(d){
+                if(d.error)return;
+                const c=d.proposal_open_contract;
+                if(c.is_sold){
+                    const contract=this.pendingContracts.get(c.contract_id);
+                    if(!contract)return;
+                    const profit=parseFloat(c.sell_price||0)-parseFloat(contract.cost);
+                    this.totalPL+=profit;this.balance+=profit;
+                    
+                    if(contract.type === 'hedge'){
+                        // Handle hedge contract completion
+                        if(profit>0){
+                            this.log(`Hedge WIN: +$${profit.toFixed(2)}`,'success');
+                        } else {
+                            this.log(`Hedge LOSS: $${profit.toFixed(2)}`,'error');
+                        }
+                        this.pendingContracts.delete(c.contract_id);
+                        
+                        // Check if all hedge contracts are completed
+                        const remainingHedgeContracts = Array.from(this.pendingContracts.values()).filter(c => c.type === 'hedge');
+                        if(remainingHedgeContracts.length === 0){
+                            // All hedge contracts completed
+                            this.isHedging = false;
+                            this.log('All hedge contracts completed - Resuming normal trading','info');
+                            this.updateUI();
+                            
+                            // Check stop conditions before continuing
+                            const shouldStop = this.checkAdvancedStopConditions();
+                            if(!shouldStop && this.isRunning){
+                                const entryPointMode = document.getElementById('entryPointMode');
+                                if(entryPointMode && entryPointMode.checked){
+                                    this.waitingForEntry = true;
+                                    this.log('Waiting for entry point for next trade...','info');
+                                } else {
+                                    setTimeout(()=>this.tradeA(),1000);
+                                }
+                            }
+                        }
+                    } else {
+                        // Handle main contract (Contract A) completion
+                        this.stats.totalTrades++;
+                        if(profit>0){
+                            this.stats.wins++;
+                            this.log(`Contract A WIN: +$${profit.toFixed(2)}`,'success');
+                            this.pendingContracts.delete(c.contract_id);
+                            this.updateUI();
+                            
+                            // Check stop conditions before continuing
+                            const shouldStop = this.checkAdvancedStopConditions();
+                            if(!shouldStop && this.isRunning){
+                                const entryPointMode = document.getElementById('entryPointMode');
+                                if(entryPointMode && entryPointMode.checked){
+                                    this.waitingForEntry = true;
+                                    this.log('Waiting for entry point for next trade...','info');
+                                } else {
+                                    setTimeout(()=>this.tradeA(),1000);
+                                }
+                            }
+                        }
+                        else{
+                            this.stats.losses++;
+                            this.log(`Contract A LOSS: $${profit.toFixed(2)}`,'error');
+                            this.pendingContracts.delete(c.contract_id);
+                            this.updateUI();
+                            
+                            // Check stop conditions before continuing
+                            const shouldStop = this.checkAdvancedStopConditions();
+                            if(!shouldStop && this.isRunning){
+                                // Check if hedge mode is enabled after a loss
+                                const hedgeMode = document.getElementById('hedgeMode');
+                                if(hedgeMode && hedgeMode.checked){
+                                    const hedgeType = document.getElementById('hedgeType');
+                                    if(hedgeType && hedgeType.value === 'NORMAL'){
+                                        // Normal hedge mode - execute immediately
+                                        this.log('Contract A lost - Executing Normal Hedge Mode (OVER 5 & UNDER 4)','warning');
+                                        this.executeHedge();
+                                    } else if(hedgeType && hedgeType.value === 'TRIGGER'){
+                                        // Trigger hedge mode - wait for trigger condition
+                                        this.log('Contract A lost - Waiting for trigger condition...','warning');
+                                        this.waitingForHedgeTrigger = true;
+                                    }
+                                } else {
+                                    // No hedge mode - continue with next trade
+                                    const entryPointMode = document.getElementById('entryPointMode');
+                                    if(entryPointMode && entryPointMode.checked){
+                                        this.waitingForEntry = true;
+                                        this.log('Waiting for entry point for next trade...','info');
+                                    } else {
+                                        setTimeout(()=>this.tradeA(),1000);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            checkEntryPoint(){
+                if(!this.waitingForEntry || !this.isRunning) return;
+                
+                const entryPoint = document.getElementById('entryPoint');
+                if(!entryPoint) return;
+                
+                const targetDigit = parseInt(entryPoint.value);
+                if(this.lastDigit === targetDigit){
+                    this.log(`Entry point ${targetDigit} detected! Executing Contract A...`,'success');
+                    this.waitingForEntry = false;
+                    setTimeout(()=>this.tradeA(),500);
+                }
+            }
+
+            checkTrigger(){
+                const hedgeMode = document.getElementById('hedgeMode');
+                const hedgeType = document.getElementById('hedgeType');
+                if (!hedgeMode || !hedgeType) return;
+                
+                // Only check triggers if we're waiting for hedge trigger after a loss
+                if(this.waitingForHedgeTrigger && hedgeMode.checked && hedgeType.value==='TRIGGER' && !this.isHedging){
+                    // Get selected trigger conditions
+                    const selectedTriggers = Array.from(document.querySelectorAll('.trigger-option:checked')).map(cb => cb.value);
+                    
+                    for(const trigger of selectedTriggers){
+                        if(this.checkTriggerCondition(trigger)){
+                            this.log(`Hedge trigger activated: ${trigger}`,'warning');
+                            this.waitingForHedgeTrigger = false; // Reset waiting state
+                            this.executeHedge();
+                            break; // Only execute once per tick
+                        }
+                    }
+                }
+            }
+
+            checkTriggerCondition(trigger){
+                if(this.digitHistory.length < 2) return false;
+                
+                const lastDigit = this.digitHistory[0];
+                const secondLastDigit = this.digitHistory[1];
+                
+                switch(trigger){
+                    case '4 or 5':
+                        return lastDigit === 4 || lastDigit === 5;
+                    case '4,5':
+                        return lastDigit === 4 && secondLastDigit === 5;
+                    case '5,4':
+                        return lastDigit === 5 && secondLastDigit === 4;
+                    case '4,4':
+                        return lastDigit === 4 && secondLastDigit === 4;
+                    case '5,5':
+                        return lastDigit === 5 && secondLastDigit === 5;
+                    case '4':
+                        return lastDigit === 4;
+                    case '5':
+                        return lastDigit === 5;
+                    default:
+                        return false;
+                }
+            }
+
+            executeHedge(){
+                this.isHedging=true;
+                const hedgeStake = document.getElementById('hedgeStake');
+                const marketSelect = document.getElementById('marketSelect');
+                const tradeDuration = document.getElementById('tradeDuration');
+                if (!hedgeStake || !marketSelect) return;
+                
+                const stake=parseFloat(hedgeStake.value);
+                const symbol=marketSelect.value;
+                const duration = tradeDuration ? parseInt(tradeDuration.value) : 1;
+                
+                // Only check if we have enough balance for both hedge contracts
+                if(stake * 2 > this.balance) {
+                    this.log(`Insufficient balance for hedge ($${(stake * 2).toFixed(2)} required, $${this.balance.toFixed(2)} available)`,'error');
+                    this.isHedging = false;
+                    // Continue with normal trading instead
+                    if(this.isRunning){
+                        const entryPointMode = document.getElementById('entryPointMode');
+                        if(entryPointMode && entryPointMode.checked){
+                            this.waitingForEntry = true;
+                            this.log('Waiting for entry point for next trade...','info');
+                        } else {
+                            setTimeout(()=>this.tradeA(),1000);
+                        }
+                    }
+                    return;
+                }
+                
+                this.log(`Executing hedge - OVER 5 & UNDER 4 with $${stake} each (${duration} tick${duration > 1 ? 's' : ''})...`,'info');
+                
+                // Reset hedge proposals array
+                this.hedgeProposals = [];
+                
+                // Generate unique numeric req_id values
+                const baseReqId = Date.now();
+                
+                // Request proposals for both hedge contracts with EXACT same parameters
+                const over5Proposal = {
+                    proposal: 1,
+                    amount: stake,
+                    basis: 'stake',
+                    contract_type: 'DIGITOVER',
+                    barrier: 5,
+                    symbol: symbol,
+                    currency: 'USD',
+                    duration: duration,
+                    duration_unit: 't',
+                    req_id: baseReqId
+                };
+                
+                const under4Proposal = {
+                    proposal: 1,
+                    amount: stake,
+                    basis: 'stake',
+                    contract_type: 'DIGITUNDER',
+                    barrier: 4,
+                    symbol: symbol,
+                    currency: 'USD',
+                    duration: duration,
+                    duration_unit: 't',
+                    req_id: baseReqId + 1
+                };
+                
+                // Store expected req_ids for tracking
+                this.expectedHedgeReqIds = [baseReqId, baseReqId + 1];
+                
+                // Send both proposals SIMULTANEOUSLY - no delays between them
+                this.send(over5Proposal);
+                this.send(under4Proposal);
+                
+                this.log(`Hedge proposals sent: OVER 5 & UNDER 4 ($${stake} each)`,'info');
+            }
+
+            updateUI(){
+                const elements = {
+                    balance: document.getElementById('balance'),
+                    currentPrice: document.getElementById('currentPrice'),
+                    lastDigit: document.getElementById('lastDigit'),
+                    tickTime: document.getElementById('tickTime'),
+                    totalWins: document.getElementById('totalWins'),
+                    totalLosses: document.getElementById('totalLosses'),
+                    totalTrades: document.getElementById('totalTrades'),
+                    winRate: document.getElementById('winRate'),
+                    totalPL: document.getElementById('totalPL'),
+                    connectionStatus: document.getElementById('connectionStatus'),
+                    connectionIndicator: document.getElementById('connectionIndicator'),
+                    currentMarket: document.getElementById('currentMarket'),
+                    runBtn: document.getElementById('runBtn'),
+                    stopBtn: document.getElementById('stopBtn'),
+                    systemStatus: document.getElementById('systemStatus'),
+                    digitHistoryDisplay: document.getElementById('digitHistory')
+                };
+
+                if (elements.balance) elements.balance.textContent=this.balance.toFixed(2);
+                if (elements.currentPrice) elements.currentPrice.textContent=this.currentPrice.toFixed(5);
+                if (elements.lastDigit) elements.lastDigit.textContent=this.lastDigit;
+                if (elements.tickTime) elements.tickTime.textContent=new Date().toLocaleTimeString();
+                if (elements.totalWins) elements.totalWins.textContent=this.stats.wins;
+                if (elements.totalLosses) elements.totalLosses.textContent=this.stats.losses;
+                if (elements.totalTrades) elements.totalTrades.textContent=this.stats.totalTrades;
+                
+                const winRate=this.stats.totalTrades>0?(this.stats.wins/this.stats.totalTrades*100):0;
+                if (elements.winRate) elements.winRate.textContent=winRate.toFixed(1)+'%';
+                if (elements.totalPL) {
+                    elements.totalPL.textContent=this.totalPL.toFixed(2);
+                    elements.totalPL.style.color=this.totalPL>=0?'#4caf50':'#f44336';
+                }
+                
+                if (elements.connectionStatus) elements.connectionStatus.textContent=this.isConnected?'Connected':'Disconnected';
+                if (elements.connectionIndicator) {
+                    elements.connectionIndicator.className=this.isConnected?'status-indicator status-connected':'status-indicator status-disconnected';
+                }
+                
+                const marketSelect = document.getElementById('marketSelect');
+                if (elements.currentMarket && marketSelect) elements.currentMarket.textContent=marketSelect.value;
+                
+                if (elements.runBtn) elements.runBtn.disabled=!this.isConnected||this.isRunning;
+                if (elements.stopBtn) elements.stopBtn.disabled=!this.isRunning;
+                
+                // Update system status
+                if (elements.systemStatus) {
+                    if (!this.isConnected) {
+                        elements.systemStatus.textContent = 'Disconnected';
+                        elements.systemStatus.style.color = '#f44336';
+                    } else if (this.waitingForEntry) {
+                        const entryPoint = document.getElementById('entryPoint');
+                        const targetDigit = entryPoint ? entryPoint.value : '?';
+                        elements.systemStatus.textContent = `Waiting for entry point: ${targetDigit}`;
+                        elements.systemStatus.style.color = '#ff9800';
+                    } else if (this.waitingForHedgeTrigger) {
+                        elements.systemStatus.textContent = 'Waiting for hedge trigger...';
+                        elements.systemStatus.style.color = '#ff5722';
+                    } else if (this.isHedging) {
+                        elements.systemStatus.textContent = 'Hedge Mode Active';
+                        elements.systemStatus.style.color = '#9c27b0';
+                    } else if (this.isRunning) {
+                        elements.systemStatus.textContent = 'Trading Active';
+                        elements.systemStatus.style.color = '#4caf50';
+                    } else {
+                        elements.systemStatus.textContent = 'Ready';
+                        elements.systemStatus.style.color = '#4fc3f7';
+                    }
+                }
+                
+                // Update digit history display
+                if (elements.digitHistoryDisplay) {
+                    if (this.digitHistory.length > 0) {
+                        elements.digitHistoryDisplay.textContent = this.digitHistory.slice(0, 8).join(' ');
+                    } else {
+                        elements.digitHistoryDisplay.textContent = '-';
+                    }
+                }
+            }
+
+            clearLog(){
+                const logContent = document.getElementById('logContent');
+                if (logContent) {
+                    logContent.innerHTML='';
+                    this.log('Log cleared','info');
+                }
+            }
+
+            clearStats(){
+                this.stats={wins:0,losses:0,totalTrades:0};
+                this.totalPL=0;
+                this.updateUI();
+                this.log('Stats cleared','info');
+            }
+
+            checkAdvancedStopConditions(){
+                const takeProfit = parseFloat(document.getElementById('takeProfit')?.value) || 100;
+                const stopLoss = parseFloat(document.getElementById('stopLoss')?.value) || 50;
+                
+                // Check take profit condition
+                if (this.totalPL >= takeProfit) {
+                    this.log(`🎯 TAKE PROFIT REACHED: $${this.totalPL.toFixed(2)} (Target: $${takeProfit.toFixed(2)})`, 'success');
+                    this.log('🛑 Advanced Hedger stopped automatically due to take profit', 'success');
+                    this.stop();
+                    return true; // Stop further processing
+                }
+                
+                // Check stop loss condition
+                if (this.totalPL <= -stopLoss) {
+                    this.log(`🚨 STOP LOSS REACHED: $${this.totalPL.toFixed(2)} (Limit: -$${stopLoss.toFixed(2)})`, 'error');
+                    this.log('🛑 Advanced Hedger stopped automatically due to stop loss', 'error');
+                    this.stop();
+                    return true; // Stop further processing
+                }
+                
+                return false; // Continue trading
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            window.hedger = new HigherLowerHedger();
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9935d32de3c18a6b',t:'MTc2MTI3MDY0NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
